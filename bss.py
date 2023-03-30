@@ -4,25 +4,39 @@ import os
 import math
 import argparse
 import yaml
-from astropy.time import Time
-from astroquery.simbad import Simbad
-import astropy.units as u
-import numpy as np
-import matplotlib.pyplot as plt
-from orbital import utilities
-from astropy.io import fits
-from specutils import Spectrum1D,SpectralRegion
-import astropy.wcs as fitswcs 
 import warnings
 
-from specutils.fitting import find_lines_derivative
-from specutils.manipulation import noise_region_uncertainty
-from binarystarsolve.binarystarsolve import StarSolve
+# numpy
+import numpy as np
 
+# astropy
+from astropy.io import fits
+from astropy.time import Time
+import astropy.units as u
+import astropy.wcs as fitswcs 
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation
 
-__version__ = 0.1
+# astroquery
+from astroquery.simbad import Simbad
+
+# specutils
+from specutils import Spectrum1D,SpectralRegion
+from specutils.fitting import find_lines_derivative
+from specutils.manipulation import noise_region_uncertainty
+
+# matplotlib
+import matplotlib.pyplot as plt
+
+# orbitalpy
+from orbital import utilities
+
+# binarystarsolve
+from binarystarsolve.binarystarsolve import StarSolve
+
+#
+
+__version__ = 0.2
 
 # 
 
