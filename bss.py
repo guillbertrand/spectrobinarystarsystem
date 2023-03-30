@@ -65,13 +65,7 @@ def extractObservations(specs, period = None):
             rv = getRadialVelocity(centroid) 
             logging.info('  Centroid : %s ± %s'% centroid)
             logging.info('  Radial velocity : %s ± %s'% rv)
-        obs[header['JD-OBS']] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
-        
-    if(period):
-        jd0 = min(obs.keys())
-        for jd in obs:
-            phase = getPhase(float(jd0), period, float(jd))
-            obs[jd]['phase'] = phase
+        obs[float(header['JD-OBS'])] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
     return obs
 
 def getRadialVelocity(centroid, lambda0 = 6562.82 * u.AA):
@@ -81,7 +75,7 @@ def getRadialVelocity(centroid, lambda0 = 6562.82 * u.AA):
 def getRadialVelocityCurve(t, t0, K, e, w, v0):
     w = math.radians(w)
     # Mean anomaly
-    M = 2 * np.pi *  ((t - t0)%1)    
+    M = 2 * np.pi *  ((t - t0) %1)    
     # Eccentric anomaly
     E = utilities.eccentric_anomaly_from_mean(e,M, tolerance=0.00001)   
     # True anomaly
@@ -126,11 +120,15 @@ def initPlot():
     return (fig, ax)
 
 def plotRadialVelocityCurve(v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
-    model_x = np.arange(-0.1,1.1, 0.005)
+    model_x = np.arange(-.1,1.1, 0.005)
     model_y = list(map(lambda x: getRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
     plt.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
 
-def plotRadialVelocityDotsFromData(specs):  
+def plotRadialVelocityDotsFromData(specs, period, jd0):  
+    if(period):
+        for jd in specs:
+            phase = getPhase(float(jd0), period, float(jd))
+            specs[jd]['phase'] = phase
     colors = {}
     i = 0
     for jd, s in specs.items():
@@ -149,7 +147,7 @@ def plotRadialVelocityDotsFromData(specs):
 def saveAndShowPlot():
     plt.legend() 
     plt.tight_layout(pad=1, w_pad=0, h_pad=0)
-    plt.xticks(np.arange(-0.1, 1.1, 0.1))
+    plt.xticks(np.arange(-0.2, 1.2, 0.1))
     plt.yticks(np.arange(-50, 60, 10))
     plt.savefig(wdir+'/bss_phased_result.png', dpi=conf['dpi'])
     plt.show()  
@@ -208,7 +206,7 @@ if __name__ == '__main__':
         if(conf['period']):
             p = conf['period']
         data = extractObservations(specs, p)
-
+        
         # write bss result file for BinaryStarSolver
         with open(wdir+'/bss_results.txt', 'w') as f: 
             for key, value in data.items():
@@ -217,9 +215,10 @@ if __name__ == '__main__':
 
         initPlot()
         #[γ, K, ω, e, T0, P, a, f(M)]
-        params, err, cov = StarSolve(data_file = "sandbox/alphadra/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
-        plotRadialVelocityCurve(params[0], params[1], params[3], params[2], 0.133, conf['line_color'], 0.8, 0.8)
-        plotRadialVelocityDotsFromData(data)
+        params, err, cov = StarSolve(data_file = wdir+"/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
+        jd0 = params[4] + 2400000
+        plotRadialVelocityCurve(params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
+        plotRadialVelocityDotsFromData(data, params[5], jd0)
         saveAndShowPlot()
         print('[γ, K, ω, e, T0, P, a, f(M)]')
         print(params)
