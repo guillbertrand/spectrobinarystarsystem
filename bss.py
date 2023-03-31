@@ -79,9 +79,9 @@ def extractObservations(specs, period = None):
 
             if(__debug_mode__):
                 ax = axs.flat[i]
-                ax.plot(centroid[2].spectral_axis.to(u.AA), centroid[2].flux , "k--", label="Original spectrum",lw=0.7)
-                ax.plot(centroid[3].spectral_axis.to(u.AA), centroid[3].flux, "r-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=0.7)
-                ax.axvline(x=centroid[0].value, color='b', linestyle='-',lw=0.7)
+                ax.plot(centroid[2].spectral_axis.to(u.AA), centroid[2].flux , "r--", label="Original spectrum",lw=0.7)
+                ax.plot(centroid[3].spectral_axis.to(u.AA), centroid[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
+                ax.axvline(x=centroid[0].value, color='r', linestyle='-',lw=0.7)
                 ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
                 ax.grid(True)
                 ax.tick_params(axis='both', which='major', labelsize=6)
@@ -92,8 +92,8 @@ def extractObservations(specs, period = None):
         i+=1
     
     if __debug_mode__:
-        plt.legend() 
         plt.tight_layout(pad=0.8, w_pad=0, h_pad=0.5)
+        plt.savefig(wdir+'/bss_debug_result.png', dpi=conf['dpi'])
         plt.show()
     return obs
 
