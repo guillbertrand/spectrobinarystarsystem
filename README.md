@@ -1,5 +1,5 @@
 # Spectroscopic Binary Star System
-Small script to find radial velocities of spectroscopic binaries fro spectra and then solves various orbital parameters with the library BinaryStarSolver and plot it with matplotlib. 
+Small script to find radial velocities of spectroscopic binaries spectra and then solves various orbital parameters with the library BinaryStarSolver and plot it with matplotlib. 
 
 ## Requirements 
 ```bash
