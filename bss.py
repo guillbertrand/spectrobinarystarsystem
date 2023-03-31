@@ -22,8 +22,9 @@ from astroquery.simbad import Simbad
 
 # specutils
 from specutils import Spectrum1D,SpectralRegion
-from specutils.fitting import find_lines_derivative
-from specutils.manipulation import noise_region_uncertainty
+from specutils.fitting import find_lines_derivative, find_lines_threshold
+from specutils.manipulation import noise_region_uncertainty, extract_region
+from specutils.analysis import centroid
 
 # matplotlib
 import matplotlib.pyplot as plt
@@ -37,6 +38,7 @@ from binarystarsolve.binarystarsolve import StarSolve
 #
 
 __version__ = 0.2
+__debug_mode__ = 0
 
 # 
 
@@ -51,21 +53,48 @@ def extractObservations(specs, period = None):
             dec = result_table[0]['DEC']
             sc = SkyCoord(ra+' '+dec, unit=(u.hourangle, u.deg))
 
+    if __debug_mode__:
+        plt.rcParams['font.size'] = conf['font_size']
+        plt.rcParams['font.family'] = conf['font_family']
+        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(14,7))
+    
     obs = {}
+    i = 0
     for s in specs:
-        logging.info('\U0001F4C8 Open spectrum %s'% os.path.basename(s))
+        logging.info('\U0001F4C8 Process spectrum %s'% os.path.basename(s))
         f = fits.open(s)
         header = f[0].header
-        logging.info('  Observation date : %s'% header['DATE-OBS'])
+        logging.info('      - Observation date : %s - %s'% (header['DATE-OBS'], header['JD-OBS']))
         rv = None
         if (sc):
-            rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
-            logging.info('  Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
+            if('BSS_VHEL' in header and header['BSS_VHEL']):
+                rvc = None
+            else:
+                rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
+            logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
             centroid = findCentroid(f, rvc)
             rv = getRadialVelocity(centroid) 
-            logging.info('  Centroid : %s ± %s'% centroid)
-            logging.info('  Radial velocity : %s ± %s'% rv)
+            logging.info('      - Centroid : %s ± %s'% (centroid[0], centroid[1]))
+            logging.info('      - Radial velocity : %s ± %s'% rv)
+
+            if(__debug_mode__):
+                ax = axs.flat[i]
+                ax.plot(centroid[2].spectral_axis.to(u.AA), centroid[2].flux , "k--", label="Original spectrum",lw=0.7)
+                ax.plot(centroid[3].spectral_axis.to(u.AA), centroid[3].flux, "r-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=0.7)
+                ax.axvline(x=centroid[0].value, color='b', linestyle='-',lw=0.7)
+                ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
+                ax.grid(True)
+                ax.tick_params(axis='both', which='major', labelsize=6)
+                ax.tick_params(axis='both', which='minor', labelsize=6)
+        
+
         obs[float(header['JD-OBS'])] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
+        i+=1
+    
+    if __debug_mode__:
+        plt.legend() 
+        plt.tight_layout(pad=0.8, w_pad=0, h_pad=0.5)
+        plt.show()
     return obs
 
 def getRadialVelocity(centroid, lambda0 = 6562.82 * u.AA):
@@ -98,8 +127,10 @@ def findCentroid(spectrum, radial_velocity_correction):
                                     'CUNIT1': 'Angstrom', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
+        rs = Spectrum1D(flux=flux,  wcs=wcs_data)
         s = Spectrum1D(flux=flux,  wcs=wcs_data)
-        s.shift_spectrum_to(radial_velocity=radial_velocity_correction)
+        if radial_velocity_correction:
+            s.shift_spectrum_to(radial_velocity=radial_velocity_correction)
         noise_region = SpectralRegion(6600*u.AA, 6625*u.AA)
         snru = noise_region_uncertainty(s, noise_region)
 
@@ -107,7 +138,10 @@ def findCentroid(spectrum, radial_velocity_correction):
         lines = lines[lines['line_type'] == 'absorption']['line_center']
         mean = lines.mean()
         error = [abs(mean.value - lines.max().value), abs(mean.value - lines.min().value)]
-        return (mean.to(u.AA), np.max(error)*u.AA)
+
+        region = SpectralRegion(6555*u.AA, 6570*u.AA)
+ 
+        return (mean.to(u.AA), np.max(error)*u.AA, extract_region(rs,region), extract_region(s,region))
     
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
@@ -156,7 +190,7 @@ if __name__ == '__main__':
     #
     default_conf_filename = 'bss.config.yaml'
 
-    FORMAT = '- %(message)s'
+    FORMAT = '%(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     logging.info('\U0001F680 BinaryStarSystem %s - Start \U0001F680' % __version__)
@@ -189,6 +223,8 @@ if __name__ == '__main__':
             conf = yaml.load(f,Loader=yaml.FullLoader)
     else :
         logging.info('\U0001F4C1 Error : %s not found !' % default_conf_filename)
+
+    __debug_mode__ = conf['debug_mode']
 
     # find spec files 
     specs = []
