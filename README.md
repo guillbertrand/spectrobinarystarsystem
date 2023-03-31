@@ -32,3 +32,46 @@ radial_velocity_correction: barycentric # The kind of velocity correction. Must 
 flux_threshold: -0.5 # The threshold a pixel must be above to be considered part of a line. The threshold is positive for emission lines and negative for absorption lines.
 dpi: 150
 ```
+
+And run
+
+```bash
+python bss.py sample/alphadra/ # mac / linux
+py .\bss.py .\sample\alphadra\ # windows
+
+# output
+🚀 BinaryStarSystem 0.2 - Start 🚀
+✨ Load configuration file 🔧  bss.config.yaml
+📁 13 spectra files found !
+📈 Process spectrum _alpdra_20230305_847.fits
+      - Observation date : 2023-03-05T20:20:03.1803571 - 2460009.3473
+      - Radial velocity correction (barycentric) : -1.1909445364983446 km / s 
+      - Centroid : 6562.084591464368 Angstrom ± 0.0 Angstrom
+      - Radial velocity : -33.59378019376873 km / s ± 0.0 km / s
+📈 Process spectrum _hd123299_20220513_979.fits
+      - Observation date : 2022-05-13T23:30:26.8146777 - 2459713.4795
+      - Radial velocity correction (barycentric) : -11.41529213109784 km / s
+      - Centroid : 6562.994614212781 Angstrom ± 0.0 Angstrom
+      - Radial velocity : 7.976452813187491 km / s ± 0.0 km / s
+📈 Process spectrum _hd123299_20220527_899.fits
+      - Observation date : 2022-05-27T21:33:55.0977123 - 2459727.3986
+      - Radial velocity correction (barycentric) : -11.770828725714242 km / s 
+      - Centroid : 6562.225274820505 Angstrom ± 0.0 Angstrom
+      - Radial velocity : -27.16730359743505 km / s ± 0.0 km / s
+📈 Process spectrum _hd123299_20220602_912.fits
+      - Observation date : 2022-06-02T21:52:40.6113366 - 2459733.4116
+      - Radial velocity correction (barycentric) : -11.759725353579157 km / s
+      - Centroid : 6561.9931332292845 Angstrom ± 0.0 Angstrom
+      - Radial velocity : -37.77163195566003 km / s ± 0.0 km / s
+      ...
+      ...
+      ...
+```
+
+
+![results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/sample/alphadra/bss_phased_result.png)
+
+
+
+![debug results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/sample/alphadra/bss_debug_result.png)
+
