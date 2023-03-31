@@ -7,12 +7,12 @@ fig_size_x: 9
 fig_size_y: 5
 object_name: HD123299
 period: 51.41891
-period_guess: 
+period_guess:  
 debug_mode: 1
 title: "α Dra - Phased radial-velocities - observations collected from April 2022 to Mars 2023"
 subtitle: "StarEx HR - G. Bertrand & A. Leduc"
 binary_star_type: SB1 # SB1 or SB2
-spec_file_regex: '_(.+)_(\d+)_(\d+)(.*).fits' # Fits file pattern
+spec_file_regex: '_(.+)_(\d+)_(\d+).fits' # Fits file pattern
 line_color: black # Define the color of the fitted velocity curve
 points_color: red,black # Define the color of the dots ex 'red' or a color cylcle for each observer ex with 3 observers 'red,black,yellow'
 radial_velocity_correction: barycentric # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.

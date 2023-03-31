@@ -124,13 +124,14 @@ def findCentroid(spectrum, radial_velocity_correction):
         warnings.simplefilter('ignore')
 
         wcs_data = fitswcs.WCS(header={'CDELT1': round(header['CDELT1'],4), 'CRVAL1': header['CRVAL1'],
-                                    'CUNIT1': 'Angstrom', 'CTYPE1': 'WAVE',
+                                    'CUNIT1': 'Angstroms', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
         rs = Spectrum1D(flux=flux,  wcs=wcs_data)
-        s = Spectrum1D(flux=flux,  wcs=wcs_data)
+        s = Spectrum1D(flux=flux ,  wcs=wcs_data)
         if radial_velocity_correction:
             s.shift_spectrum_to(radial_velocity=radial_velocity_correction)
+            
         noise_region = SpectralRegion(6600*u.AA, 6625*u.AA)
         snru = noise_region_uncertainty(s, noise_region)
 
