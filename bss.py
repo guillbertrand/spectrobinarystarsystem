@@ -151,16 +151,16 @@ def findCenterOfLine(spectrum,radial_velocity_correction,ax):
             warnings.simplefilter('ignore')
             g1_fit = fit_generic_continuum(invert_s)
             y_continuum_fitted = g1_fit(invert_s.spectral_axis)
-            invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -1*u.Jy, spectral_axis = invert_s.spectral_axis)
+            invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -.8*u.Jy , spectral_axis = invert_s.spectral_axis)
 
-        g_init = models.Gaussian1D(amplitude=invert_s.flux.argmax()*u.Jy-1*u.Jy, mean=xpeak, stddev=.2*u.AA)
+        g_init = models.Gaussian1D(amplitude=invert_s.flux.argmax()*u.Jy-.8*u.Jy, mean=xpeak, stddev=.2*u.AA)
         g_fit = fit_lines(invert_s, g_init)
         y_fit = g_fit(invert_s.spectral_axis) * -1
         ipeak = y_fit.argmin()
         xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
 
-        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux*-1)
-        ax.plot(invert_s.spectral_axis.to(u.AA), y_fit)
+        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux*-1, color="k")
+        ax.plot(invert_s.spectral_axis.to(u.AA), y_fit, color="r")
         ax.axvline(x=xpeak.value, color='r', linestyle='-',lw=0.7)
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
