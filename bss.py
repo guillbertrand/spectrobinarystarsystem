@@ -25,7 +25,7 @@ from astroquery.simbad import Simbad
 from specutils import Spectrum1D,SpectralRegion
 from specutils.manipulation import noise_region_uncertainty, extract_region
 from specutils.analysis import centroid
-from specutils.fitting import fit_lines
+from specutils.fitting import fit_lines, fit_generic_continuum
 
 # matplotlib
 import matplotlib.pyplot as plt
@@ -68,26 +68,26 @@ def extractObservations(specs, period = None):
         logging.info('      - Observation date : %s - %s'% (header['DATE-OBS'], header['JD-OBS']))
         rv = None
         if (sc):
+            ax = axs.flat[i]
             if('BSS_VHEL' in header and header['BSS_VHEL']):
                 rvc = None
             else:
                 rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
             logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
-            center = findCenterOfLine(f, rvc)
+            center = findCenterOfLine(f, rvc, ax)
             rv = getRadialVelocity(center) 
             logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
-            if(__debug_mode__):
-                ax = axs.flat[i]
-                ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "r--", label="Original spectrum",lw=0.7)
-                ax.plot(center[3].spectral_axis.to(u.AA), center[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
-                ax.axvline(x=center[0].value, color='r', linestyle='-',lw=0.7)
-                ax.axvline(x=6562.82, color='k', linestyle='--',lw=0.7)
-                ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
-                ax.grid(True)
-                ax.tick_params(axis='both', which='major', labelsize=6)
-                ax.tick_params(axis='both', which='minor', labelsize=6)
+            
+            ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "r--", label="Original spectrum",lw=0.7)
+            ax.plot(center[3].spectral_axis.to(u.AA), center[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
+        
+            ax.axvline(x=6562.82, color='k', linestyle='--',lw=0.7)
+            ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
+            ax.grid(True)
+            ax.tick_params(axis='both', which='major', labelsize=6)
+            ax.tick_params(axis='both', which='minor', labelsize=6)
         
 
         obs[float(header['JD-OBS'])] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
@@ -128,7 +128,7 @@ def dopplerShift(s,vrad):
     return Spectrum1D(flux=flux, spectral_axis=wave_out)
 
 
-def findCenterOfLine(spectrum,radial_velocity_correction):
+def findCenterOfLine(spectrum,radial_velocity_correction,ax):
     specdata = spectrum[0].data
     header = spectrum[0].header
     with warnings.catch_warnings():  # Ignore warnings
@@ -145,18 +145,23 @@ def findCenterOfLine(spectrum,radial_velocity_correction):
         ipeak = s.flux.argmin()
         xpeak = s.spectral_axis[ipeak].to(u.AA)
 
-        # invert_s = Spectrum1D(flux=flux*-1+(1*u.Jy), wcs=wcs_data)
-        # g_init = models.Voigt1D(amplitude_L=.72*u.Jy, x_0=xpeak)
-        # g_fit = fit_lines(invert_s, g_init, window=(xpeak-(.4*u.AA), xpeak+(.4*u.AA)))
-        # y_fit = g_fit(invert_s.spectral_axis)
-        # ipeak = y_fit.argmax()
-        # xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
+        invert_s = extract_region(Spectrum1D(flux=s.flux*-1+(1*u.Jy), wcs=wcs_data),SpectralRegion(xpeak-(1.5*u.AA), xpeak+(1.5*u.AA)))
 
-        # plt.plot(invert_s.spectral_axis, invert_s.flux)
-        # plt.plot(invert_s.spectral_axis, y_fit)
-        # plt.title('Single fit peak window')
-        # plt.grid(True)
-        # plt.show()
+        with warnings.catch_warnings():  # Ignore warnings
+            warnings.simplefilter('ignore')
+            g1_fit = fit_generic_continuum(invert_s)
+            y_continuum_fitted = g1_fit(invert_s.spectral_axis)
+            invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -1*u.Jy, spectral_axis = invert_s.spectral_axis)
+
+        g_init = models.Gaussian1D(amplitude=invert_s.flux.argmax()*u.Jy-1*u.Jy, mean=xpeak, stddev=.2*u.AA)
+        g_fit = fit_lines(invert_s, g_init)
+        y_fit = g_fit(invert_s.spectral_axis) * -1
+        ipeak = y_fit.argmin()
+        xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
+
+        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux*-1)
+        ax.plot(invert_s.spectral_axis.to(u.AA), y_fit)
+        ax.axvline(x=xpeak.value, color='r', linestyle='-',lw=0.7)
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
