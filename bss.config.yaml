@@ -17,10 +17,6 @@ line_color: black                               # Define the color of the fitted
 points_color: red,black                         # Define the color of the dots ex 'red' or a color
                                                 # cycle for each observer ex with 3 observers 'red,black,yellow'
 
-radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.
-
-flux_threshold: -0.35                           # The threshold a pixel must be above to be considered part of a line. 
-                                                #The threshold is positive for emission lines and negative for absorption lines.
-line_half_width: 0.5                                               
+radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.                     
 
 dpi: 150

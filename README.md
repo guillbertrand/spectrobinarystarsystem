@@ -24,7 +24,7 @@ title_font_size: 9
 font_family: monospace
 fig_size_x: 9
 fig_size_y: 5
-debug_mode: 1                                   # plot all spectra
+debug_mode: 1                                   
 object_name: HD123299                           # Target name (useful for Simbad query)
 period: 51.41891                                # If the period of the orbit is already known use this param (period in days). 
 period_guess:                                   # If the period is uncertain use this param (period in days).
@@ -38,8 +38,6 @@ points_color: red,black                         # Define the color of the dots e
 
 radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.
 
-flux_threshold: -0.4                            # The threshold a pixel must be above to be considered part of a line. 
-                                                #The threshold is positive for emission lines and negative for absorption lines.
 
 dpi: 150
 ```
