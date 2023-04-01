@@ -16,15 +16,16 @@ import astropy.units as u
 import astropy.wcs as fitswcs 
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation
+from astropy.modeling import models
 
 # astroquery
 from astroquery.simbad import Simbad
 
 # specutils
 from specutils import Spectrum1D,SpectralRegion
-from specutils.fitting import find_lines_derivative, find_lines_threshold
 from specutils.manipulation import noise_region_uncertainty, extract_region
 from specutils.analysis import centroid
+from specutils.fitting import fit_lines
 
 # matplotlib
 import matplotlib.pyplot as plt
@@ -72,16 +73,17 @@ def extractObservations(specs, period = None):
             else:
                 rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
             logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
-            centroid = findCentroid(f, rvc)
-            rv = getRadialVelocity(centroid) 
-            logging.info('      - Centroid : %s ± %s'% (centroid[0], centroid[1]))
+            center = findCenterOfLine(f, rvc)
+            rv = getRadialVelocity(center) 
+            logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
             if(__debug_mode__):
                 ax = axs.flat[i]
-                ax.plot(centroid[2].spectral_axis.to(u.AA), centroid[2].flux , "r--", label="Original spectrum",lw=0.7)
-                ax.plot(centroid[3].spectral_axis.to(u.AA), centroid[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
-                ax.axvline(x=centroid[0].value, color='r', linestyle='-',lw=0.7)
+                ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "r--", label="Original spectrum",lw=0.7)
+                ax.plot(center[3].spectral_axis.to(u.AA), center[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
+                ax.axvline(x=center[0].value, color='r', linestyle='-',lw=0.7)
+                ax.axvline(x=6562.82, color='k', linestyle='--',lw=0.7)
                 ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
                 ax.grid(True)
                 ax.tick_params(axis='both', which='major', labelsize=6)
@@ -97,9 +99,9 @@ def extractObservations(specs, period = None):
         plt.show()
     return obs
 
-def getRadialVelocity(centroid, lambda0 = 6562.82 * u.AA):
+def getRadialVelocity(position, radial_velocity_correction = 0, lambda0 = 6562.82 * u.AA):
     c = 299792.458 * u.km / u.s
-    return  ((c  * ((centroid[0]-lambda0)/lambda0)) , (c * (centroid[1])/lambda0))
+    return  ((c  * ((position[0]-lambda0)/lambda0)) + radial_velocity_correction , (c * (position[1])/lambda0))
 
 def getRadialVelocityCurve(t, t0, K, e, w, v0):
     w = math.radians(w)
@@ -117,7 +119,16 @@ def radialVelocityCorrection(skycoord, jd, longitude, latitude, elevation):
     vcorr = skycoord.radial_velocity_correction(kind=conf['radial_velocity_correction'], obstime=t, location=loc)  
     return vcorr.to(u.km / u.s)
 
-def findCentroid(spectrum, radial_velocity_correction):
+def dopplerShift(s,vrad): 
+    cc = 299792.458 * u.km / u.s
+    wave = s.spectral_axis
+    flux = s.flux
+    wave_out = wave * (1+vrad/cc)
+    flux = np.interp(wave,wave_out,flux) 
+    return Spectrum1D(flux=flux, spectral_axis=wave_out)
+
+
+def findCenterOfLine(spectrum,radial_velocity_correction):
     specdata = spectrum[0].data
     header = spectrum[0].header
     with warnings.catch_warnings():  # Ignore warnings
@@ -127,22 +138,29 @@ def findCentroid(spectrum, radial_velocity_correction):
                                     'CUNIT1': 'Angstroms', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
-        rs = Spectrum1D(flux=flux,  wcs=wcs_data)
-        s = Spectrum1D(flux=flux ,  wcs=wcs_data)
+        rs = Spectrum1D(flux=flux, wcs=wcs_data)
         if radial_velocity_correction:
-            s.shift_spectrum_to(radial_velocity=radial_velocity_correction)
-            
-        noise_region = SpectralRegion(6600*u.AA, 6625*u.AA)
-        snru = noise_region_uncertainty(s, noise_region)
+            s = dopplerShift(rs, radial_velocity_correction)
+ 
+        ipeak = s.flux.argmin()
+        xpeak = s.spectral_axis[ipeak].to(u.AA)
 
-        lines = find_lines_derivative(snru, flux_threshold=conf['flux_threshold'])
-        lines = lines[lines['line_type'] == 'absorption']['line_center']
-        mean = lines.mean()
-        error = [abs(mean.value - lines.max().value), abs(mean.value - lines.min().value)]
+        # invert_s = Spectrum1D(flux=flux*-1+(1*u.Jy), wcs=wcs_data)
+        # g_init = models.Voigt1D(amplitude_L=.72*u.Jy, x_0=xpeak)
+        # g_fit = fit_lines(invert_s, g_init, window=(xpeak-(.4*u.AA), xpeak+(.4*u.AA)))
+        # y_fit = g_fit(invert_s.spectral_axis)
+        # ipeak = y_fit.argmax()
+        # xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
 
+        # plt.plot(invert_s.spectral_axis, invert_s.flux)
+        # plt.plot(invert_s.spectral_axis, y_fit)
+        # plt.title('Single fit peak window')
+        # plt.grid(True)
+        # plt.show()
+     
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
-        return (mean.to(u.AA), np.max(error)*u.AA, extract_region(rs,region), extract_region(s,region))
+        return (xpeak, 0, extract_region(rs,region),extract_region(s,region))
     
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']

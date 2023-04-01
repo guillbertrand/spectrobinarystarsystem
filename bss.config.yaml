@@ -19,7 +19,8 @@ points_color: red,black                         # Define the color of the dots e
 
 radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.
 
-flux_threshold: -0.4                            # The threshold a pixel must be above to be considered part of a line. 
+flux_threshold: -0.35                           # The threshold a pixel must be above to be considered part of a line. 
                                                 #The threshold is positive for emission lines and negative for absorption lines.
+line_half_width: 0.5                                               
 
 dpi: 150
