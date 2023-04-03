@@ -29,6 +29,8 @@ from specutils.fitting import fit_lines, fit_generic_continuum
 
 # matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+
 
 # orbitalpy
 from orbital import utilities
@@ -57,7 +59,7 @@ def extractObservations(specs, period = None):
     if __debug_mode__:
         plt.rcParams['font.size'] = '6'
         plt.rcParams['font.family'] = 'monospace'
-        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(13,8))
+        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(11,7))
     
     obs = {}
     i = 0
@@ -120,13 +122,11 @@ def findCenterOfLine(spectrum,ax,dispersion):
     with warnings.catch_warnings():  # Ignore warnings
         warnings.simplefilter('ignore')
 
-        wcs_data = fitswcs.WCS(header={'CDELT1': round(header['CDELT1'],4), 'CRVAL1': header['CRVAL1'],
+        wcs_data = fitswcs.WCS(header={'CDELT1': float(header['CDELT1']), 'CRVAL1': header['CRVAL1'],
                                     'CUNIT1': 'Angstroms', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
         s = Spectrum1D(flux=flux, wcs=wcs_data)
-        #if radial_velocity_correction:
-        #  s = dopplerShift(rs, radial_velocity_correction)
  
         ipeak = s.flux.argmin()
         xpeak = s.spectral_axis[ipeak].to(u.AA)
@@ -153,17 +153,22 @@ def findCenterOfLine(spectrum,ax,dispersion):
         
         g_fit = fit_lines(invert_s, g_init,window=SpectralRegion(xpeak-(w2*u.AA), xpeak+(w2*u.AA)))
         y_fit = g_fit(invert_s.spectral_axis) 
-        ipeak = y_fit.argmin()
-        xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
+
+        match conf['model']:
+            case 'gaussian':
+                center = g_fit.mean
+            case _:
+                center = g_fit.x_0
+        #
 
         ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux, color="k")
         ax.plot(invert_s.spectral_axis.to(u.AA), y_fit, color="r")
-        ax.axvline(x=xpeak.value, color='r', linestyle='-',lw=0.7)
+        ax.axvline(x=center.value, color='r', linestyle='-',lw=0.7)
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
-        error = (299792.458*conf['precision']*dispersion/__lambda_ref__.value) 
-        return (xpeak, error, extract_region(s,region))
+        #error = (299792.458*conf['precision']*dispersion/__lambda_ref__.value) 
+        return (center.value*u.AA, 0, extract_region(s,region))
     
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
@@ -172,7 +177,7 @@ def initPlot():
     plt.suptitle(conf['title']+'\n'+conf['subtitle'],fontsize=conf['title_font_size'], fontweight=0, color='black' )
     ax.set_xlabel('Phase', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
     ax.set_ylabel('Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
-    ax.grid(color='grey', alpha=0.2, linestyle='-', linewidth=0.5, axis='both')
+    ax.grid(color='grey', alpha=0.2, linestyle='-', linewidth=0.5, axis='both', which='both')
     return (fig, ax)
 
 def plotRadialVelocityCurve(v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
@@ -180,7 +185,7 @@ def plotRadialVelocityCurve(v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label
     model_y = list(map(lambda x: getRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
     plt.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
 
-def plotRadialVelocityDotsFromData(specs, period, jd0):  
+def plotRadialVelocityDotsFromData(specs, period, jd0, error):  
     if(period):
         for jd in specs:
             phase = getPhase(float(jd0), period, float(jd))
@@ -197,11 +202,14 @@ def plotRadialVelocityDotsFromData(specs, period, jd0):
             else:
                 colors[s['header']['OBSERVER']] = 'k'
             i+=1
-            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = s['radial_velocity'][1].value, label=s['header']['OBSERVER'], fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.2)
+            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = error[1]*2*3, label=s['header']['OBSERVER'], ecolor='k', capsize=3,fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.7)
         else:
-            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = s['radial_velocity'][1].value, fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.2)        
-   
-def saveAndShowPlot():
+            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = error[1]*2*3, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)        
+    
+def saveAndShowPlot(ax):
+    ax.yaxis.set_major_locator(MultipleLocator(10))
+    ax.xaxis.set_major_locator(MultipleLocator(0.1))
+    
     plt.legend() 
     plt.tight_layout(pad=1, w_pad=0, h_pad=0)
     plt.xticks(np.arange(-0.2, 1.2, 0.1))
@@ -272,13 +280,13 @@ if __name__ == '__main__':
                 output = '%s %s' % (float(key)-2400000., round(value['radial_velocity'][0].value,3))
                 f.write(output+'\n')
 
-        initPlot()
+        (fig, ax) = initPlot()
         #[γ, K, ω, e, T0, P, a, f(M)]
         params, err, cov = StarSolve(data_file = wdir+"/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
         jd0 = params[4] + 2400000
         plotRadialVelocityCurve(params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
-        plotRadialVelocityDotsFromData(data, params[5], jd0)
-        saveAndShowPlot()
+        plotRadialVelocityDotsFromData(data, params[5], jd0, err)
+        saveAndShowPlot(ax)
         print('[γ, K, ω, e, T0, P, a, f(M)]')
         print(params)
         print(err)
