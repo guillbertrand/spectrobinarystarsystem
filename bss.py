@@ -55,9 +55,9 @@ def extractObservations(specs, period = None):
             sc = SkyCoord(ra+' '+dec, unit=(u.hourangle, u.deg))
 
     if __debug_mode__:
-        plt.rcParams['font.size'] = conf['font_size']
-        plt.rcParams['font.family'] = conf['font_family']
-        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(14,7))
+        plt.rcParams['font.size'] = '6'
+        plt.rcParams['font.family'] = 'monospace'
+        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(13,8))
     
     obs = {}
     i = 0
@@ -74,14 +74,12 @@ def extractObservations(specs, period = None):
             else:
                 rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
             logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
-            center = findCenterOfLine(f, ax)
-            rv = getRadialVelocity(center, rvc) 
+            center = findCenterOfLine(f, ax, header['CDELT1'])
+            rv = getRadialVelocity(center, rvc, __lambda_ref__) 
             logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
-            ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "k", label="Original spectrum",lw=0.7)
-        
-            ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
+            ax.set_title('%s\nJD=%s  \n%s' % (os.path.basename(s), header['JD-OBS'],header['OBSERVER']), fontsize="7")
             ax.grid(True)
             ax.tick_params(axis='both', which='major', labelsize=6)
             ax.tick_params(axis='both', which='minor', labelsize=6)
@@ -91,14 +89,14 @@ def extractObservations(specs, period = None):
         i+=1
     
     if __debug_mode__:
-        plt.tight_layout(pad=0.8, w_pad=0, h_pad=0.5)
+        plt.tight_layout(pad=0.8, w_pad=0, h_pad=1)
         plt.savefig(wdir+'/bss_debug_result.png', dpi=conf['dpi'])
         plt.show()
     return obs
 
 def getRadialVelocity(position, radial_velocity_correction = 0, lambda0 = 6562.82 * u.AA):
     c = 299792.458 * u.km / u.s
-    return  ((c  * ((position[0]-lambda0)/lambda0)) + radial_velocity_correction , (c * (position[1])/lambda0))
+    return  ((c  * ((position[0]-lambda0)/lambda0)) + radial_velocity_correction , (c * (position[1])/lambda0.value))
 
 def getRadialVelocityCurve(t, t0, K, e, w, v0):
     w = math.radians(w)
@@ -116,15 +114,7 @@ def radialVelocityCorrection(skycoord, jd, longitude, latitude, elevation):
     vcorr = skycoord.radial_velocity_correction(kind=conf['radial_velocity_correction'], obstime=t, location=loc)  
     return vcorr.to(u.km / u.s)
 
-def dopplerShift(s,vrad): 
-    cc = 299792.458 * u.km / u.s
-    wave = s.spectral_axis
-    flux = s.flux
-    wave_out = wave * (1+vrad/cc)
-    flux = np.interp(wave,wave_out,flux) 
-    return Spectrum1D(flux=flux, spectral_axis=wave_out)
-
-def findCenterOfLine(spectrum,ax):
+def findCenterOfLine(spectrum,ax,dispersion):
     specdata = spectrum[0].data
     header = spectrum[0].header
     with warnings.catch_warnings():  # Ignore warnings
@@ -141,19 +131,27 @@ def findCenterOfLine(spectrum,ax):
         ipeak = s.flux.argmin()
         xpeak = s.spectral_axis[ipeak].to(u.AA)
 
-        invert_s = extract_region(Spectrum1D(flux=s.flux*-1, wcs=wcs_data),SpectralRegion(xpeak-(6*u.AA), xpeak+(6*u.AA)))
-        s_fit = fit_generic_continuum(invert_s, exclude_regions=[SpectralRegion(xpeak-(.5*u.AA), xpeak+(.5*u.AA))])
+        w1 = float(conf['spectral_region']) / 2
+        w2 = float(conf['gaussian_width']) /2
+        fwhm = float(conf['fwhm']) 
+
+        invert_s = extract_region(Spectrum1D(flux=s.flux*-1, wcs=wcs_data),SpectralRegion(xpeak-(w1*u.AA), xpeak+(w1*u.AA)))
+        s_fit = fit_generic_continuum(invert_s, exclude_regions=[SpectralRegion(xpeak-(w2*u.AA), xpeak+(w2*u.AA))])
         invert_s   = invert_s / s_fit(invert_s.spectral_axis)
         invert_s = invert_s - 1
 
-        # with warnings.catch_warnings():  # Ignore warnings
-        #     warnings.simplefilter('ignore')
-        #     g1_fit = fit_generic_continuum(invert_s)
-        #     y_continuum_fitted = g1_fit(invert_s.spectral_axis)
-        #     invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -.8*u.Jy , spectral_axis = invert_s.spectral_axis)
-
-        g_init = models.Gaussian1D(mean=xpeak, amplitude=invert_s.flux.argmax())
-        g_fit = fit_lines(invert_s, g_init,window=SpectralRegion(xpeak-(.5*u.AA), xpeak+(.5*u.AA)))
+        match conf['model']:
+            case 'gaussian':
+                g_init = models.Gaussian1D(mean=xpeak, amplitude=invert_s.flux.argmax())
+            case 'voigt':
+                g_init = models.Voigt1D(x_0=xpeak, amplitude_L=2/(np.pi*fwhm))
+            case 'lorentz':
+                g_init = models.Lorentz1D(x_0=xpeak, fwhm=fwhm)
+            case _:
+                g_init = models.Gaussian1D(mean=xpeak, amplitude=invert_s.flux.argmax())
+        #
+        
+        g_fit = fit_lines(invert_s, g_init,window=SpectralRegion(xpeak-(w2*u.AA), xpeak+(w2*u.AA)))
         y_fit = g_fit(invert_s.spectral_axis) 
         ipeak = y_fit.argmin()
         xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
@@ -164,7 +162,8 @@ def findCenterOfLine(spectrum,ax):
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
-        return (xpeak, 0, extract_region(s,region))
+        error = (299792.458*conf['precision']*dispersion/__lambda_ref__.value) 
+        return (xpeak, error, extract_region(s,region))
     
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
@@ -185,6 +184,7 @@ def plotRadialVelocityDotsFromData(specs, period, jd0):
     if(period):
         for jd in specs:
             phase = getPhase(float(jd0), period, float(jd))
+            logging.info('%s phase : %s' % (os.path.basename(specs[jd]['fits']), phase))
             specs[jd]['phase'] = phase
     colors = {}
     i = 0
@@ -205,7 +205,6 @@ def saveAndShowPlot():
     plt.legend() 
     plt.tight_layout(pad=1, w_pad=0, h_pad=0)
     plt.xticks(np.arange(-0.2, 1.2, 0.1))
-    plt.yticks(np.arange(-50, 60, 10))
     plt.savefig(wdir+'/bss_phased_result.png', dpi=conf['dpi'])
     plt.show()  
 
@@ -248,6 +247,7 @@ if __name__ == '__main__':
         logging.info('\U0001F4C1 Error : %s not found !' % default_conf_filename)
 
     __debug_mode__ = conf['debug_mode']
+    __lambda_ref__ = float(conf['lambda_ref']) * u.AA
 
     # find spec files 
     specs = []
