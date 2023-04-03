@@ -13,7 +13,7 @@ points_color: red,black                         # Define the color of the dots e
 
 radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
 
-lambda_ref: 6562.82       
+lambda_ref: 6562.82                             
 model: voigt                                    # gaussian, voigt or lorentz
 spectral_region: 10
 fwhm: .5
