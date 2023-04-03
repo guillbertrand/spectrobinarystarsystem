@@ -74,16 +74,13 @@ def extractObservations(specs, period = None):
             else:
                 rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
             logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
-            center = findCenterOfLine(f, rvc, ax)
-            rv = getRadialVelocity(center) 
+            center = findCenterOfLine(f, ax)
+            rv = getRadialVelocity(center, rvc) 
             logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
-            
-            ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "r--", label="Original spectrum",lw=0.7)
-            ax.plot(center[3].spectral_axis.to(u.AA), center[3].flux, "k-", label="Shifted spectrum - %s correction" % conf['radial_velocity_correction'],lw=1)
+            ax.plot(center[2].spectral_axis.to(u.AA), center[2].flux , "k", label="Original spectrum",lw=0.7)
         
-            ax.axvline(x=6562.82, color='k', linestyle='--',lw=0.7)
             ax.set_title('%s - %s' % (header['JD-OBS'],header['OBSERVER']), fontsize="8")
             ax.grid(True)
             ax.tick_params(axis='both', which='major', labelsize=6)
@@ -127,8 +124,7 @@ def dopplerShift(s,vrad):
     flux = np.interp(wave,wave_out,flux) 
     return Spectrum1D(flux=flux, spectral_axis=wave_out)
 
-
-def findCenterOfLine(spectrum,radial_velocity_correction,ax):
+def findCenterOfLine(spectrum,ax):
     specdata = spectrum[0].data
     header = spectrum[0].header
     with warnings.catch_warnings():  # Ignore warnings
@@ -138,34 +134,37 @@ def findCenterOfLine(spectrum,radial_velocity_correction,ax):
                                     'CUNIT1': 'Angstroms', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
-        rs = Spectrum1D(flux=flux, wcs=wcs_data)
-        if radial_velocity_correction:
-            s = dopplerShift(rs, radial_velocity_correction)
+        s = Spectrum1D(flux=flux, wcs=wcs_data)
+        #if radial_velocity_correction:
+        #  s = dopplerShift(rs, radial_velocity_correction)
  
         ipeak = s.flux.argmin()
         xpeak = s.spectral_axis[ipeak].to(u.AA)
 
-        invert_s = extract_region(Spectrum1D(flux=s.flux*-1+(1*u.Jy), wcs=wcs_data),SpectralRegion(xpeak-(1.5*u.AA), xpeak+(1.5*u.AA)))
+        invert_s = extract_region(Spectrum1D(flux=s.flux*-1, wcs=wcs_data),SpectralRegion(xpeak-(6*u.AA), xpeak+(6*u.AA)))
+        s_fit = fit_generic_continuum(invert_s, exclude_regions=[SpectralRegion(xpeak-(.5*u.AA), xpeak+(.5*u.AA))])
+        invert_s   = invert_s / s_fit(invert_s.spectral_axis)
+        invert_s = invert_s - 1
 
-        with warnings.catch_warnings():  # Ignore warnings
-            warnings.simplefilter('ignore')
-            g1_fit = fit_generic_continuum(invert_s)
-            y_continuum_fitted = g1_fit(invert_s.spectral_axis)
-            invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -.8*u.Jy , spectral_axis = invert_s.spectral_axis)
+        # with warnings.catch_warnings():  # Ignore warnings
+        #     warnings.simplefilter('ignore')
+        #     g1_fit = fit_generic_continuum(invert_s)
+        #     y_continuum_fitted = g1_fit(invert_s.spectral_axis)
+        #     invert_s = Spectrum1D(flux=invert_s.flux / y_continuum_fitted*u.Jy -.8*u.Jy , spectral_axis = invert_s.spectral_axis)
 
-        g_init = models.Gaussian1D(amplitude=invert_s.flux.argmax()*u.Jy-.8*u.Jy, mean=xpeak, stddev=.2*u.AA)
-        g_fit = fit_lines(invert_s, g_init)
-        y_fit = g_fit(invert_s.spectral_axis) * -1
+        g_init = models.Gaussian1D(mean=xpeak, amplitude=invert_s.flux.argmax())
+        g_fit = fit_lines(invert_s, g_init,window=SpectralRegion(xpeak-(.5*u.AA), xpeak+(.5*u.AA)))
+        y_fit = g_fit(invert_s.spectral_axis) 
         ipeak = y_fit.argmin()
         xpeak = invert_s.spectral_axis[ipeak].to(u.AA)
 
-        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux*-1, color="k")
+        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux, color="k")
         ax.plot(invert_s.spectral_axis.to(u.AA), y_fit, color="r")
         ax.axvline(x=xpeak.value, color='r', linestyle='-',lw=0.7)
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
-        return (xpeak, 0, extract_region(rs,region),extract_region(s,region))
+        return (xpeak, 0, extract_region(s,region))
     
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
