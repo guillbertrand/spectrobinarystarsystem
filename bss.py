@@ -59,7 +59,7 @@ def extractObservations(specs, period = None):
     if __debug_mode__:
         plt.rcParams['font.size'] = '6'
         plt.rcParams['font.family'] = 'monospace'
-        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(11,7))
+        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(11,7), sharex=True, sharey=True)
     
     obs = {}
     i = 0
@@ -91,7 +91,7 @@ def extractObservations(specs, period = None):
         i+=1
     
     if __debug_mode__:
-        plt.tight_layout(pad=0.8, w_pad=0, h_pad=1)
+        plt.tight_layout(pad=0.8, w_pad=1.5, h_pad=1)
         plt.savefig(wdir+'/bss_debug_result.png', dpi=conf['dpi'])
         plt.show()
     return obs
@@ -116,13 +116,17 @@ def radialVelocityCorrection(skycoord, jd, longitude, latitude, elevation):
     vcorr = skycoord.radial_velocity_correction(kind=conf['radial_velocity_correction'], obstime=t, location=loc)  
     return vcorr.to(u.km / u.s)
 
+def findNearest(array, value):
+    array = np.asarray(array)
+    return (np.abs(array - value)).argmin()
+
 def findCenterOfLine(spectrum,ax,dispersion):
     specdata = spectrum[0].data
     header = spectrum[0].header
     with warnings.catch_warnings():  # Ignore warnings
         warnings.simplefilter('ignore')
 
-        wcs_data = fitswcs.WCS(header={'CDELT1': float(header['CDELT1']), 'CRVAL1': header['CRVAL1'],
+        wcs_data = fitswcs.WCS(header={'CDELT1': header['CDELT1'], 'CRVAL1': header['CRVAL1'],
                                     'CUNIT1': 'Angstroms', 'CTYPE1': 'WAVE',
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
@@ -173,19 +177,22 @@ def findCenterOfLine(spectrum,ax,dispersion):
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
     plt.rcParams['font.family'] = conf['font_family']
-    fig, ax =  plt.subplots(figsize=(9,6))
-    plt.suptitle(conf['title']+'\n'+conf['subtitle'],fontsize=conf['title_font_size'], fontweight=0, color='black' )
-    ax.set_xlabel('Phase', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
-    ax.set_ylabel('Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
-    ax.grid(color='grey', alpha=0.2, linestyle='-', linewidth=0.5, axis='both', which='both')
-    return (fig, ax)
+    fig, axs =  plt.subplots(2,1,figsize=(8,7),gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
+    plt.suptitle(conf['title']+'\n'+conf['subtitle'],fontsize=conf['title_font_size'],fontweight="bold", color='black' )
+    axs[1].set_xlabel('Phase', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
+    axs[0].set_ylabel('Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
+    axs[1].set_ylabel('RV residual', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
+    axs[0].grid(color='grey', alpha=0.2, linestyle='-', linewidth=0.5, axis='both', which='both')
+    axs[1].grid(color='grey', alpha=0.2, linestyle='-', linewidth=0.5, axis='both', which='both')
+    return (fig, axs)
 
-def plotRadialVelocityCurve(v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
-    model_x = np.arange(-.1,1.1, 0.005)
+def plotRadialVelocityCurve(ax, v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
+    model_x = np.arange(0,1.011, 0.005)
     model_y = list(map(lambda x: getRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
-    plt.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
+    ax.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
+    return (model_x, model_y)
 
-def plotRadialVelocityDotsFromData(specs, period, jd0, error):  
+def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):  
     if(period):
         for jd in specs:
             phase = getPhase(float(jd0), period, float(jd))
@@ -202,17 +209,23 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error):
             else:
                 colors[s['header']['OBSERVER']] = 'k'
             i+=1
-            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = error[1]*2*3, label=s['header']['OBSERVER'], ecolor='k', capsize=3,fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.7)
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label=s['header']['OBSERVER'].lower(), ecolor='k', capsize=3,fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.7)
         else:
-            plt.errorbar(s['phase'], s['radial_velocity'][0].value,yerr = error[1]*2*3, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)        
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)    
+        
+        xindex = findNearest(model[0], s['phase'])
+        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)            
     
 def saveAndShowPlot(ax):
-    ax.yaxis.set_major_locator(MultipleLocator(10))
-    ax.xaxis.set_major_locator(MultipleLocator(0.1))
+    ax[0].yaxis.set_major_locator(MultipleLocator(10))
+    ax[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
+
+    ax[1].yaxis.set_major_locator(MultipleLocator(0.5))
+    ax[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
     
-    plt.legend() 
-    plt.tight_layout(pad=1, w_pad=0, h_pad=0)
-    plt.xticks(np.arange(-0.2, 1.2, 0.1))
+    ax[0].legend() 
+    plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+    plt.xticks(np.arange(0, 1.01, 0.1))
     plt.savefig(wdir+'/bss_phased_result.png', dpi=conf['dpi'])
     plt.show()  
 
@@ -280,13 +293,13 @@ if __name__ == '__main__':
                 output = '%s %s' % (float(key)-2400000., round(value['radial_velocity'][0].value,3))
                 f.write(output+'\n')
 
-        (fig, ax) = initPlot()
+        (fig, axs) = initPlot()
         #[γ, K, ω, e, T0, P, a, f(M)]
         params, err, cov = StarSolve(data_file = wdir+"/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
         jd0 = params[4] + 2400000
-        plotRadialVelocityCurve(params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
-        plotRadialVelocityDotsFromData(data, params[5], jd0, err)
-        saveAndShowPlot(ax)
+        model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
+        plotRadialVelocityDotsFromData(data, params[5], jd0, err, axs, model)
+        saveAndShowPlot(axs)
         print('[γ, K, ω, e, T0, P, a, f(M)]')
         print(params)
         print(err)
