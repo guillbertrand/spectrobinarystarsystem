@@ -40,7 +40,7 @@ from binarystarsolve.binarystarsolve import StarSolve
 
 #
 
-__version__ = 0.3
+__version__ = 0.4
 __debug_mode__ = 0
 
 # 
@@ -136,7 +136,7 @@ def findCenterOfLine(spectrum,ax,dispersion):
         xpeak = s.spectral_axis[ipeak].to(u.AA)
 
         w1 = float(conf['spectral_region']) / 2
-        w2 = float(conf['gaussian_width']) /2
+        w2 = float(conf['window_width']) /2
         fwhm = float(conf['fwhm']) 
 
         invert_s = extract_region(Spectrum1D(flux=s.flux*-1, wcs=wcs_data),SpectralRegion(xpeak-(w1*u.AA), xpeak+(w1*u.AA)))
