@@ -36,7 +36,7 @@ lambda_ref: 6562.82
 model: voigt                                    # gaussian, voigt or lorentz
 spectral_region: 10
 fwhm: .5
-gaussian_width: 2.6
+window_width: 1.5
 
 # result options
 font_size: 9
