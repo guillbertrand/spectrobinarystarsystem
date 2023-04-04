@@ -48,6 +48,8 @@ __debug_mode__ = 0
 def getPhase(jd0, period, jd):
     return (jd-jd0) / period % 1 
 
+#
+
 def extractObservations(specs, period = None):
     sc = None
     result_table = Simbad.query_object(conf['object_name'])
@@ -96,11 +98,15 @@ def extractObservations(specs, period = None):
         plt.show()
     return obs
 
+#
+
 def getRadialVelocity(position, radial_velocity_correction = 0, lambda0 = 6562.82 * u.AA):
     c = 299792.458 * u.km / u.s
     return  ((c  * ((position[0]-lambda0)/lambda0)) + radial_velocity_correction , (c * (position[1])/lambda0.value))
 
-def getRadialVelocityCurve(t, t0, K, e, w, v0):
+#
+
+def computeRadialVelocityCurve(t, t0, K, e, w, v0):
     w = math.radians(w)
     # Mean anomaly
     M = 2 * np.pi *  ((t - t0) %1)    
@@ -109,6 +115,8 @@ def getRadialVelocityCurve(t, t0, K, e, w, v0):
     # True anomaly
     f = utilities.true_anomaly_from_eccentric(e, E) 
     return (K * (e * np.cos(w) + np.cos(w + f)) + v0 ) 
+
+#
 
 def radialVelocityCorrection(skycoord, jd, longitude, latitude, elevation):
     t = Time(jd, format='jd', scale='utc')
@@ -188,7 +196,7 @@ def initPlot():
 
 def plotRadialVelocityCurve(ax, v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
     model_x = np.arange(0,1.011, 0.005)
-    model_y = list(map(lambda x: getRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
+    model_y = list(map(lambda x: computeRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
     ax.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
     return (model_x, model_y)
 
