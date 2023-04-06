@@ -194,7 +194,7 @@ def initPlot():
     return (fig, axs)
 
 def plotRadialVelocityCurve(ax, v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
-    model_x = np.arange(0,1.011, 0.005)
+    model_x = np.arange(0,1.011, 0.0001)
     model_y = list(map(lambda x: computeRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
     ax.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
     return (model_x, model_y)
