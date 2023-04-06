@@ -18,16 +18,18 @@ Customize your configuration file (bss.config.yaml).
 
 ```bash
 ---
-debug_mode: 1                                   # plot all spectra
+---
+debug_mode: 0                                   # plot all spectra
 object_name: HD123299                           # Target name (useful for Simbad query)
-period: 51.41891                                # If the period of the orbit is already known use this param (period in days). 
-period_guess:                                   # If the period is uncertain use this param (period in days).
-title: "α Dra - Phased radial-velocities - observations collected from April 2022 to Mars 2023"
-subtitle: "StarEx HR - G. Bertrand & A. Leduc"
+T0: 2451441.804                                 # Fix Periastron epoch T0 if known (julian date)
+period:                                         # If the period of the orbit is already known use this param (period in days). 
+period_guess: 51                                # If the period is uncertain use this param (period in days).
+title: "α Dra - HD123299 - Phased radial velocities"
+subtitle: "April 2022 to April 2023 - Star'Ex HR (2400 l/mm) - G. Bertrand & A. Leduc"
 binary_star_type: SB1                           # SB1 or SB2
 spec_file_regex: '_(.+)_(\d+)_(\d+)(.*).fits'   # Fits file pattern
 line_color: black                               # Define the color of the fitted velocity curve
-points_color: red,black                         # Define the color of the dots ex 'red' or a color
+points_color: red,black,brown                   # Define the color of the dots ex 'red' or a color
                                                 # cycle for each observer ex with 3 observers 'red,black,yellow'
 
 radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
@@ -42,10 +44,11 @@ window_width: 1.5
 font_size: 9
 title_font_size: 9
 font_family: monospace
-fig_size_x: 9
-fig_size_y: 5
+fig_size_x: 8
+fig_size_y: 4
+fig_rv_y_multiple: 10
+fig_residual_y_multiple: 0.5
 dpi: 150
-
 ```
 
 And run
