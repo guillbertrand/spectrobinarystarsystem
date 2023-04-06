@@ -40,7 +40,7 @@ from binarystarsolve.binarystarsolve import StarSolve
 
 #
 
-__version__ = 0.4
+__version__ = 0.5
 __debug_mode__ = 0
 
 # 
@@ -234,10 +234,10 @@ def saveAndShowPlot(ax, t0, p):
     
     plt.suptitle("%s\n%s\nT0=%s P=%s" % (t,conf['subtitle'],t0,p),fontsize=conf['title_font_size'],fontweight="0", color='black' )
 
-    ax[0].yaxis.set_major_locator(MultipleLocator(10))
+    ax[0].yaxis.set_major_locator(MultipleLocator(conf['fig_rv_y_multiple'])) 
     ax[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
-    ax[1].yaxis.set_major_locator(MultipleLocator(0.5))
+    ax[1].yaxis.set_major_locator(MultipleLocator(conf['fig_residual_y_multiple']))
     ax[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
     
     ax[0].legend() 
@@ -324,6 +324,8 @@ if __name__ == '__main__':
         else:
             t0 = params[4] + 2400000
             v0 = 0
+
+        # plot results
         (fig, axs) = initPlot()
         model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8, 0.8)
         plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
