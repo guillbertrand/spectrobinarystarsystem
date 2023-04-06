@@ -186,7 +186,6 @@ def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
     plt.rcParams['font.family'] = conf['font_family']
     fig, axs =  plt.subplots(2,1,figsize=(8,7),gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
-    plt.suptitle(conf['title']+'\n'+conf['subtitle'],fontsize=conf['title_font_size'],fontweight="bold", color='black' )
     axs[1].set_xlabel('Phase', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
     axs[0].set_ylabel('Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
     axs[1].set_ylabel('RV residual', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
@@ -224,7 +223,14 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
         xindex = findNearest(model[0], s['phase'])
         axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)            
     
-def saveAndShowPlot(ax):
+def saveAndShowPlot(ax, t0, p):
+    t = ''
+    split_oname = conf['title'].split(' ')
+    for w in split_oname:
+        t += r"$\bf{%s}$ " % (w)
+    
+    plt.suptitle("%s\n%s\nT0=%s P=%s" % (t,conf['subtitle'],t0,p),fontsize=conf['title_font_size'],fontweight="0", color='black' )
+
     ax[0].yaxis.set_major_locator(MultipleLocator(10))
     ax[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
@@ -301,13 +307,24 @@ if __name__ == '__main__':
                 output = '%s %s' % (float(key)-2400000., round(value['radial_velocity'][0].value,3))
                 f.write(output+'\n')
 
-        (fig, axs) = initPlot()
+        
         #[γ, K, ω, e, T0, P, a, f(M)]
         params, err, cov = StarSolve(data_file = wdir+"/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
-        jd0 = params[4] + 2400000
-        model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
-        plotRadialVelocityDotsFromData(data, params[5], jd0, err, axs, model)
-        saveAndShowPlot(axs)
+        
+        # If conf['T0'] Compute phase delta between T0 of the model and the fixed value 
+        if(conf['T0']):
+            t0 = conf['T0'] 
+            phase1 =  getPhase(t0,params[5],params[4]+2400000)
+            phase2 =  1.0
+            v0 = phase1 - phase2 
+        # Else use t0 compute by the model
+        else:
+            t0 = params[4] + 2400000
+            v0 = 0
+        (fig, axs) = initPlot()
+        model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8, 0.8)
+        plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
+        saveAndShowPlot(axs,t0,params[5])
         print('[γ, K, ω, e, T0, P, a, f(M)]')
         print(params)
         print(err)
