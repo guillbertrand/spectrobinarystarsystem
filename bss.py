@@ -72,7 +72,9 @@ def extractObservations(specs, period = None):
         logging.info('      - Observation date : %s - %s'% (header['DATE-OBS'], header['JD-OBS']))
         rv = None
         if (sc):
-            ax = axs.flat[i]
+            ax = None
+            if __debug_mode__:
+                ax = axs.flat[i]
             if('BSS_VHEL' in header and header['BSS_VHEL']):
                 rvc = None
             else:
@@ -83,10 +85,11 @@ def extractObservations(specs, period = None):
             logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
-            ax.set_title('%s\nJD=%s  \n%s' % (os.path.basename(s), header['JD-OBS'],header['OBSERVER']), fontsize="7")
-            ax.grid(True)
-            ax.tick_params(axis='both', which='major', labelsize=6)
-            ax.tick_params(axis='both', which='minor', labelsize=6)
+            if __debug_mode__:
+                ax.set_title('%s\nJD=%s  \n%s' % (os.path.basename(s), header['JD-OBS'],header['OBSERVER']), fontsize="7")
+                ax.grid(True)
+                ax.tick_params(axis='both', which='major', labelsize=6)
+                ax.tick_params(axis='both', which='minor', labelsize=6)
         
 
         obs[float(header['JD-OBS'])] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
@@ -172,10 +175,10 @@ def findCenterOfLine(spectrum,ax,dispersion):
             case _:
                 center = g_fit.x_0
         #
-
-        ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux, color="k")
-        ax.plot(invert_s.spectral_axis.to(u.AA), y_fit, color="r")
-        ax.axvline(x=center.value, color='r', linestyle='-',lw=0.7)
+        if __debug_mode__:
+            ax.plot(invert_s.spectral_axis.to(u.AA), invert_s.flux, color="k")
+            ax.plot(invert_s.spectral_axis.to(u.AA), y_fit, color="r")
+            ax.axvline(x=center.value, color='r', linestyle='-',lw=0.7)
      
         region = SpectralRegion(6555*u.AA, 6570*u.AA)
  
