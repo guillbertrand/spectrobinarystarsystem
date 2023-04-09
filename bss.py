@@ -61,7 +61,7 @@ def extractObservations(specs, period = None):
     if __debug_mode__:
         plt.rcParams['font.size'] = '6'
         plt.rcParams['font.family'] = 'monospace'
-        fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(11,7), sharex=True, sharey=True)
+        fig, axs = plt.subplots(5,5, figsize=(11,7), sharex=True, sharey=True)
     
     obs = {}
     i = 0
@@ -142,9 +142,13 @@ def findCenterOfLine(spectrum,ax,dispersion):
                                     'CRPIX1': header['CRPIX1']})
         flux= specdata * u.Jy
         s = Spectrum1D(flux=flux, wcs=wcs_data)
+        
  
-        ipeak = s.flux.argmin()
-        xpeak = s.spectral_axis[ipeak].to(u.AA)
+        # [2:-2] > Hack to excude first and last value of the spectra.
+        # Sometimes fist value for the intensity is equal to 0.00 and prevents finding the true minima.
+        # Ex : sample/alphadra/_alphadra_20230406_856.fits
+        ipeak = s.flux[2:-2].argmin() 
+        xpeak = s.spectral_axis[ipeak+2].to(u.AA)
 
         w1 = float(conf['spectral_region']) / 2
         w2 = float(conf['window_width']) /2
