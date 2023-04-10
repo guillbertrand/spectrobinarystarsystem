@@ -338,7 +338,7 @@ if __name__ == '__main__':
         #plotRadialVelocityCurve(axs[0], params[0], 48.512, 0.4229, 21.28,1,'k--', 0.8, 0.8, 'K.Pavlovski, et al. 2021')
         model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8, 0.8, 'Orbital solution')
         plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
-        saveAndShowPlot(axs,t0,params[5])
+        saveAndShowPlot(axs,t0,'%s±%s days' % (params[5],round(err[5],4)))
         print('[γ, K, ω, e, T0, P, a, f(M)]')
         print(params)
         print(err)
