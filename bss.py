@@ -192,7 +192,7 @@ def findCenterOfLine(spectrum,ax,dispersion):
 def initPlot():
     plt.rcParams['font.size'] = conf['font_size']
     plt.rcParams['font.family'] = conf['font_family']
-    fig, axs =  plt.subplots(2,1,figsize=(8,7),gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
+    fig, axs =  plt.subplots(2,1,figsize=(conf['fig_size_x'],conf['fig_size_y']),gridspec_kw={'height_ratios': [4, 1]}, sharex=True)
     axs[1].set_xlabel('Phase', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
     axs[0].set_ylabel('Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
     axs[1].set_ylabel('RV residual', fontdict=None, labelpad=None, fontname = 'monospace',size=8)
@@ -212,23 +212,27 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             phase = getPhase(float(jd0), period, float(jd))
             logging.info('%s phase : %s' % (os.path.basename(specs[jd]['fits']), phase))
             specs[jd]['phase'] = phase
-    colors = {}
-    i = 0
+    observers = {}
+    i,ii = 0,0
     for jd, s in specs.items():
-        if(s['header']['OBSERVER'] not in colors.keys()):
-            if conf["points_color"] and ',' in conf["points_color"]:
-                colors[s['header']['OBSERVER']] =  [x.strip() for x in conf["points_color"].split(',')][i]
-            elif conf["points_color"]:
-                colors[s['header']['OBSERVER']] = conf["points_color"]
-            else:
-                colors[s['header']['OBSERVER']] = 'k'
+        obs = s['header']['OBSERVER'].lower()
+        label = '%s - %s' % (obs, s['header']['BSS_INST'].lower())
+        if(obs not in observers.keys()):
+            c = [x.strip() for x in conf["markers_colors"].split(',')][i]
+            observers[obs] = {'color': c, 'instruments':{}}
             i+=1
-            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label=s['header']['OBSERVER'].lower(), ecolor='k', capsize=3,fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.7)
+    
+    for jd, s in specs.items():
+        obs = s['header']['OBSERVER'].lower()
+        label = '%s - %s' % (obs, s['header']['BSS_INST'])
+        if(label not in observers[obs]['instruments'].keys()):
+            observers[obs]['instruments'][label] =  [x.strip() for x in conf["markers_styles"].split(',')][len(observers[obs]['instruments'])]
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label= label, ecolor='k', capsize=0,fmt =observers[obs]['instruments'][label], color=observers[obs]['color'], lw=0.7)
         else:
-            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)    
-        
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)    
+ 
         xindex = findNearest(model[0], s['phase'])
-        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)            
+        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)            
     
 def saveAndShowPlot(ax, t0, p):
     t = ''
@@ -236,7 +240,7 @@ def saveAndShowPlot(ax, t0, p):
     for w in split_oname:
         t += r"$\bf{%s}$ " % (w)
     
-    plt.suptitle("%s\n%s\nT0=%s P=%s" % (t,conf['subtitle'],t0,p),fontsize=conf['title_font_size'],fontweight="0", color='black' )
+    ax[0].set_title("%s\n%s\nT0=%s P=%s" % (t,conf['subtitle'],t0,p),fontsize=conf['title_font_size'],fontweight="0", color='black' )
 
     ax[0].yaxis.set_major_locator(MultipleLocator(conf['fig_rv_y_multiple'])) 
     ax[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
@@ -244,7 +248,7 @@ def saveAndShowPlot(ax, t0, p):
     ax[1].yaxis.set_major_locator(MultipleLocator(conf['fig_residual_y_multiple']))
     ax[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
     
-    ax[0].legend() 
+    ax[0].legend(bbox_to_anchor=(1, 1), loc="upper left", frameon=False,prop={'size': 8})
     plt.tight_layout(pad=1, w_pad=0, h_pad=1)
     plt.xticks(np.arange(0, 1.01, 0.1))
     plt.savefig(wdir+'/bss_phased_result.png', dpi=conf['dpi'])
