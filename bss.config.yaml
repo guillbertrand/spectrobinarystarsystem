@@ -25,7 +25,7 @@ window_width: 1.5
 font_size: 9
 title_font_size: 9
 font_family: monospace
-fig_size_x: 12
+fig_size_x: 11
 fig_size_y: 7
 fig_rv_y_multiple: 10
 fig_residual_y_multiple: 0.5

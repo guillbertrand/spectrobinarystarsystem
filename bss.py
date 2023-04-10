@@ -213,10 +213,9 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             logging.info('%s phase : %s' % (os.path.basename(specs[jd]['fits']), phase))
             specs[jd]['phase'] = phase
     observers = {}
-    i,ii = 0,0
+    i = 0
     for jd, s in specs.items():
-        obs = s['header']['OBSERVER'].lower()
-        label = '%s - %s' % (obs, s['header']['BSS_INST'].lower())
+        obs = s['header']['OBSERVER'].lower()   
         if(obs not in observers.keys()):
             c = [x.strip() for x in conf["markers_colors"].split(',')][i]
             observers[obs] = {'color': c, 'instruments':{}}
@@ -224,7 +223,7 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
     
     for jd, s in specs.items():
         obs = s['header']['OBSERVER'].lower()
-        label = '%s - %s' % (obs, s['header']['BSS_INST'])
+        label = "%s - %s" % (obs, s['header']['BSS_INST'])
         if(label not in observers[obs]['instruments'].keys()):
             observers[obs]['instruments'][label] =  [x.strip() for x in conf["markers_styles"].split(',')][len(observers[obs]['instruments'])]
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label= label, ecolor='k', capsize=0,fmt =observers[obs]['instruments'][label], color=observers[obs]['color'], lw=0.7)
