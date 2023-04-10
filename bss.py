@@ -201,7 +201,7 @@ def initPlot():
     return (fig, axs)
 
 def plotRadialVelocityCurve(ax, v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, label=""):
-    model_x = np.arange(0,1.011, 0.0001)
+    model_x = np.arange(0,1.011, 0.001)
     model_y = list(map(lambda x: computeRadialVelocityCurve(x,jd0,K,e,w,v0), model_x))
     ax.plot(model_x, model_y, color, alpha=alpha, lw=lw, label=label)
     return (model_x, model_y)
@@ -229,10 +229,11 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label= label, ecolor='k', capsize=0,fmt =observers[obs]['instruments'][label], color=observers[obs]['color'], lw=0.7)
         else:
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)    
- 
+        print(s['header']['DATE-OBS'], observers[obs]['instruments'][label])
         xindex = findNearest(model[0], s['phase'])
         axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)            
     
+
 def saveAndShowPlot(ax, t0, p):
     t = ''
     split_oname = conf['title'].split(' ')
@@ -334,7 +335,8 @@ if __name__ == '__main__':
 
         # plot results
         (fig, axs) = initPlot()
-        model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8, 0.8)
+        #plotRadialVelocityCurve(axs[0], params[0], 48.512, 0.4229, 21.28,1,'k--', 0.8, 0.8, 'K.Pavlovski, et al. 2021')
+        model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8, 0.8, 'Fit curve')
         plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
         saveAndShowPlot(axs,t0,params[5])
         print('[γ, K, ω, e, T0, P, a, f(M)]')
