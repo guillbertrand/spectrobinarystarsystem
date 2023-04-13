@@ -52,49 +52,56 @@ def getPhase(jd0, period, jd):
 
 def extractObservations(specs, period = None):
     sc = None
-    result_table = Simbad.query_object(conf['object_name'])
-    if result_table:
-            ra = result_table[0]['RA']
-            dec = result_table[0]['DEC']
-            sc = SkyCoord(ra+' '+dec, unit=(u.hourangle, u.deg))
+    if result_table := Simbad.query_object(conf['object_name']):
+        ra = result_table[0]['RA']
+        dec = result_table[0]['DEC']
+        sc = SkyCoord(f'{ra} {dec}', unit=(u.hourangle, u.deg))
 
     if __debug_mode__:
         plt.rcParams['font.size'] = '6'
         plt.rcParams['font.family'] = 'monospace'
         fig, axs = plt.subplots(math.ceil(len(specs)/4), math.ceil(len(specs)/4), figsize=(11,7), sharex=True, sharey=True)
-    
+
     obs = {}
-    i = 0
-    for s in specs:
+    for i, s in enumerate(specs):
         logging.info('\U0001F4C8 Process spectrum %s'% os.path.basename(s))
         f = fits.open(s)
         header = f[0].header
-        logging.info('      - Observation date : %s - %s'% (header['DATE-OBS'], header['JD-OBS']))
+        logging.info(
+            f"      - Observation date : {header['DATE-OBS']} - {header['JD-OBS']}"
+        )
         rv = None
-        if (sc):
+        if sc:
             ax = axs.flat[i]
-            if('BSS_VHEL' in header and header['BSS_VHEL']):
-                rvc = None
-            else:
-                rvc = radialVelocityCorrection(sc, header['JD-OBS'], header['GEO_LONG'], header['GEO_LAT'], header['GEO_ELEV'])
-            logging.info('      - Radial velocity correction (%s) : %s '% (conf['radial_velocity_correction'],rvc))
+            rvc = (
+                None
+                if ('BSS_VHEL' in header and header['BSS_VHEL'])
+                else radialVelocityCorrection(
+                    sc,
+                    header['JD-OBS'],
+                    header['GEO_LONG'],
+                    header['GEO_LAT'],
+                    header['GEO_ELEV'],
+                )
+            )
+            logging.info(
+                f"      - Radial velocity correction ({conf['radial_velocity_correction']}) : {rvc} "
+            )
             center = findCenterOfLine(f, ax, header['CDELT1'])
-            rv = getRadialVelocity(center, rvc, __lambda_ref__) 
-            logging.info('      - Center of line : %s ± %s'% (center[0], center[1]))
+            rv = getRadialVelocity(center, rvc, __lambda_ref__)
+            logging.info(f'      - Center of line : {center[0]} ± {center[1]}')
             logging.info('      - Radial velocity : %s ± %s'% rv)
 
             ax.set_title('%s\nJD=%s  \n%s' % (os.path.basename(s), header['JD-OBS'],header['OBSERVER']), fontsize="7")
             ax.grid(True)
             ax.tick_params(axis='both', which='major', labelsize=6)
             ax.tick_params(axis='both', which='minor', labelsize=6)
-        
+
 
         obs[float(header['JD-OBS'])] = {'fits':s, 'radial_velocity_corr':rvc, 'centroid': centroid, 'radial_velocity':rv, 'header':header }
-        i+=1
-    
     if __debug_mode__:
         plt.tight_layout(pad=0.8, w_pad=1.5, h_pad=1)
-        plt.savefig(wdir+'/bss_debug_result.png', dpi=conf['dpi'])
+        plt.savefig(f'{wdir}/bss_debug_result.png', dpi=conf['dpi'])
         plt.show()
     return obs
 
@@ -201,10 +208,10 @@ def plotRadialVelocityCurve(ax, v0, K, e, w, jd0,color="red", lw=0.5, alpha=1, l
     return (model_x, model_y)
 
 def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):  
-    if(period):
+    if period:
         for jd in specs:
             phase = getPhase(float(jd0), period, float(jd))
-            logging.info('%s phase : %s' % (os.path.basename(specs[jd]['fits']), phase))
+            logging.info(f"{os.path.basename(specs[jd]['fits'])} phase : {phase}")
             specs[jd]['phase'] = phase
     colors = {}
     i = 0
@@ -219,10 +226,10 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             i+=1
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label=s['header']['OBSERVER'].lower(), ecolor='k', capsize=3,fmt ='o', color=colors[s['header']['OBSERVER']], lw=0.7)
         else:
-            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)    
-        
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)
+
         xindex = findNearest(model[0], s['phase'])
-        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)            
+        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt ='o', ecolor='k', capsize=3,color=colors[s['header']['OBSERVER']], lw=.7)
     
 def saveAndShowPlot(ax):
     ax[0].yaxis.set_major_locator(MultipleLocator(10))
@@ -230,12 +237,24 @@ def saveAndShowPlot(ax):
 
     ax[1].yaxis.set_major_locator(MultipleLocator(0.5))
     ax[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
-    
-    ax[0].legend() 
+
+    ax[0].legend()
     plt.tight_layout(pad=1, w_pad=0, h_pad=1)
     plt.xticks(np.arange(0, 1.01, 0.1))
-    plt.savefig(wdir+'/bss_phased_result.png', dpi=conf['dpi'])
-    plt.show()  
+    plt.savefig(f'{wdir}/bss_phased_result.png', dpi=conf['dpi'])
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     #
@@ -250,7 +269,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("path", type=str, help="Path to your fits directory")
     parser.add_argument("-c", "--config", type=str, default=default_conf_filename, help="Custom config file name")
-    
+
     args = parser.parse_args()
     path = args.path
     conf_filename = args.config
@@ -278,7 +297,7 @@ if __name__ == '__main__':
     __debug_mode__ = conf['debug_mode']
     __lambda_ref__ = float(conf['lambda_ref']) * u.AA
 
-    # find spec files 
+    # find spec files
     specs = []
     for root, dirs, files in os.walk(wdir):
         for file in files:
@@ -290,28 +309,36 @@ if __name__ == '__main__':
     else:
         logging.info('\U0001F4C1 %d spectra files found !' % (len(specs)))
 
-        p = conf['period_guess']
-        if(conf['period']):
-            p = conf['period']
+        p = conf['period'] or conf['period_guess']
         data = extractObservations(specs, p)
-        
+
         # write bss result file for BinaryStarSolver
-        with open(wdir+'/bss_results.txt', 'w') as f: 
+        with open(f'{wdir}/bss_results.txt', 'w') as f:
             for key, value in data.items():
-                output = '%s %s' % (float(key)-2400000., round(value['radial_velocity'][0].value,3))
+                output = f"{float(key) - 2400000.0} {round(value['radial_velocity'][0].value, 3)}"
                 f.write(output+'\n')
 
         (fig, axs) = initPlot()
         #[γ, K, ω, e, T0, P, a, f(M)]
-        params, err, cov = StarSolve(data_file = wdir+"/bss_results.txt", star = "primary", Period= conf['period'], Pguess=conf['period_guess'], covariance = True, graphs=False)
+        params, err, cov = StarSolve(
+            data_file=f"{wdir}/bss_results.txt",
+            star="primary",
+            Period=conf['period'],
+            Pguess=conf['period_guess'],
+            covariance=True,
+            graphs=False,
+        )
         jd0 = params[4] + 2400000
         model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], 0, conf['line_color'], 0.8, 0.8)
         plotRadialVelocityDotsFromData(data, params[5], jd0, err, axs, model)
         saveAndShowPlot(axs)
-        print('[γ, K, ω, e, T0, P, a, f(M)]')
-        print(params)
-        print(err)
 
-
-    
-    
+        print(f'γ = {params[0]} ± {err[0]}',
+              f'K = {params[1]} ± {err[1]}',
+              f'ω = {params[2]} ± {err[2]}',
+              f'e = {params[3]} ± {err[3]}',
+              f'T0 = {params[4]} ± {err[4]}',
+              f'P = {params[5]} ± {err[5]}',
+              f'a = {params[6]} ± {err[6]}',
+              f'f(M) = {params[7]} ± {err[7]}',
+                sep='\n')
