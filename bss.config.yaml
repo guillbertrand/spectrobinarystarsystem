@@ -7,16 +7,16 @@ period_guess: 51                                # If the period is uncertain use
 title: "α Dra - HD123299 - Phased radial velocities"
 subtitle: "April 2022 to April 2023 - Star'Ex HR (2400 l/mm)"
 binary_star_type: SB1                           # SB1 or SB2
-spec_file_regex: '_(.+)_(\d+)_(\d+)(.*).fits'   # Fits file pattern
-line_color: black                               # Define the color of the fitted velocity curve
-markers_styles: o,v,^,s,D,P,X                   # Define the style of the dots by instruments type 'BSS_INST'
-markers_colors: red,darkorange,gray,black       # Define the color of the dots ex 'red' or a color
-                                                # cycle for each observer ex with 3 observers 'red,black,yellow'
+spec_file_regex: '(.*).fit'                           # Fits file pattern
+line_color: black                                     # Define the color of the fitted velocity curve
+markers_styles: o,v,^,s,D,P,X                         # Define the style of the dots by instruments type 'BSS_INST'
+markers_colors: red,black,teal,darkorange,slategrey   # Define the color of the dots ex 'red' or a color
+                                                      # cycle for each observer ex with 3 observers 'red,black,yellow'
 
-radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
+radial_velocity_correction: barycentric               # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
 
 lambda_ref: 6562.82                             
-model: voigt                                    # gaussian, voigt or lorentz
+model: voigt                                          # gaussian, voigt or lorentz
 spectral_region: 10
 fwhm: .5
 window_width: 1.5
