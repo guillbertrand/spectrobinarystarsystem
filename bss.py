@@ -40,7 +40,7 @@ from binarystarsolve.binarystarsolve import StarSolve
 
 #
 
-__version__ = 0.5
+__version__ = 0.6
 __debug_mode__ = 0
 
 
@@ -75,7 +75,8 @@ def extractObservations(specs, period=None):
     if __debug_mode__:
         plt.rcParams['font.size'] = '6'
         plt.rcParams['font.family'] = 'monospace'
-        fig, axs = plt.subplots(5,5, figsize=(11,7), sharex=True, sharey=True)
+        grid_size = math.ceil(len(specs)**.5)
+        fig, axs = plt.subplots(grid_size,grid_size-1, figsize=(11,7), sharex=True, sharey=True)
     
     obs = {}
     for i, s in enumerate(specs):
@@ -207,8 +208,12 @@ def findCenterOfLine(spectrum, ax, dispersion):
         flux = specdata * u.Jy
         s = Spectrum1D(flux=flux, wcs=wcs_data)
 
-        ipeak = s.flux.argmin()
-        xpeak = s.spectral_axis[ipeak].to(u.AA)
+        
+        # [2:-2] > Hack to excude first and last value of the spectra.
+        # Sometimes fist value for the intensity is equal to 0.00 and prevents finding the true minima.
+        # Ex : sample/alphadra/_alphadra_20230406_856.fits
+        ipeak = s.flux[2:-2].argmin() 
+        xpeak = s.spectral_axis[ipeak+2].to(u.AA)
 
         w1 = float(conf['spectral_region']) / 2
         w2 = float(conf['window_width']) / 2
@@ -528,7 +533,7 @@ if __name__ == '__main__':
         model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8,
                                         0.8)
         plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
-        saveAndShowPlot(axs)
+        saveAndShowPlot(axs, t0, params[5])
 
         print(f'γ = {params[0]} ± {err[0]}',
               f'K = {params[1]} ± {err[1]}',
