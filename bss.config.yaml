@@ -13,7 +13,7 @@ line_color: black                                     # Define the color of the 
 markers_styles: o,v,^,s,D,P,X                         
 # Define the color of the dots ex 'red' or a color
 # cycle for each observer ex with 3 observers 'red,black,yellow'
-markers_colors: purple,red,teal,darkorange,slategrey,green,black,cyan   
+markers_colors: purple,red,blue,darkorange,green,cyan,black,slategrey   
 
 radial_velocity_correction: barycentric               # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
 
