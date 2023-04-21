@@ -18,6 +18,7 @@ Customize your configuration file (bss.config.yaml).
 
 ```bash
 ---
+---
 debug_mode: 0                                   # plot all spectra
 object_name: HD123299                           # Target name (useful for Simbad query)
 T0: 2451441.804                                 # Fix Periastron epoch T0 if known (julian date)
@@ -26,16 +27,18 @@ period_guess: 51                                # If the period is uncertain use
 title: "α Dra - HD123299 - Phased radial velocities"
 subtitle: "April 2022 to April 2023 - Star'Ex HR (2400 l/mm)"
 binary_star_type: SB1                           # SB1 or SB2
-spec_file_regex: '_(.+)_(\d+)_(\d+)(.*).fits'   # Fits file pattern
-line_color: black                               # Define the color of the fitted velocity curve
-markers_styles: o,v,^,s,D,P,X                   # Define the style of the dots by instruments type 'BSS_INST'
-markers_colors: red,darkorange,gray,black       # Define the color of the dots ex 'red' or a color
-                                                # cycle for each observer ex with 3 observers 'red,black,yellow'
+spec_file_regex: '(.*).fit'                           # Fits file pattern
+line_color: black                                     # Define the color of the fitted velocity curve
+# Define the style of the dots by instruments type 'BSS_INST'
+markers_styles: o,v,^,s,D,P,X                         
+# Define the color of the dots ex 'red' or a color
+# cycle for each observer ex with 3 observers 'red,black,yellow'
+markers_colors: purple,red,teal,darkorange,slategrey,green,black,cyan   
 
-radial_velocity_correction: barycentric         # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
+radial_velocity_correction: barycentric               # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
 
 lambda_ref: 6562.82                             
-model: voigt                                    # gaussian, voigt or lorentz
+model: voigt                                          # gaussian, voigt or lorentz
 spectral_region: 10
 fwhm: .5
 window_width: 1.5
@@ -44,7 +47,7 @@ window_width: 1.5
 font_size: 9
 title_font_size: 9
 font_family: monospace
-fig_size_x: 12
+fig_size_x: 11
 fig_size_y: 7
 fig_rv_y_multiple: 10
 fig_residual_y_multiple: 0.5
@@ -106,15 +109,20 @@ _hd123299_20230327_858.fits phase : 0.05058780904101878
 _hd123299_20230328_814.fits phase : 0.06918408033301393
 _hd123299_20230330_806.fits phase : 0.1079305259508172
 _hd123299_20230402_822.fits phase : 0.1665782102374438
-[γ, K, ω, e, T0, P, a, f(M)]
-[-14.728, 47.275, 21.3121, 0.42084, 59874.5, 51.41891, 30.322, 0.4202]
-[0.30664, 0.40488, 1.39587, 0.0069263, 0.125772, 0, 0.28103, 0.011683]
+γ = -14.892 ± 0.28132
+K = 48.082 ± 0.36876
+ω = 22.9852 ± 0.987429
+e = 0.41991 ± 0.0072747
+T0 = 59874.6 ± 0.112242
+P = 51.4175 ± 0.0222469
+a = 30.854 ± 0.26318
+f(M) = 0.44272 ± 0.011336
 ```
 
 
-![results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/sample/alphadra/bss_phased_result.png)
+![results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/docs/bss_phased_result.png)
 
 
 
-![debug results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/sample/alphadra/bss_debug_result.png)
+![debug results](https://github.com/guillbertrand/spectrobinarystarsystem/raw/master/docs/bss_debug_result.png)
 

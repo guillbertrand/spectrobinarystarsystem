@@ -129,3 +129,10 @@ dmypy.json
 .pyre/
 
 pipreqs.bash
+.idea/inspectionProfiles/profiles_settings.xml
+
+.idea/
+
+sample/alphadra/bss_debug_result.png
+sample/alphadra/bss_phased_result.png
+sample/alphadra/bss_results.txt

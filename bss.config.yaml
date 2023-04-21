@@ -9,9 +9,11 @@ subtitle: "April 2022 to April 2023 - Star'Ex HR (2400 l/mm)"
 binary_star_type: SB1                           # SB1 or SB2
 spec_file_regex: '(.*).fit'                           # Fits file pattern
 line_color: black                                     # Define the color of the fitted velocity curve
-markers_styles: o,v,^,s,D,P,X                         # Define the style of the dots by instruments type 'BSS_INST'
-markers_colors: purple,red,teal,darkorange,slategrey,green,black,cyan   # Define the color of the dots ex 'red' or a color
-                                                      # cycle for each observer ex with 3 observers 'red,black,yellow'
+# Define the style of the dots by instruments type 'BSS_INST'
+markers_styles: o,v,^,s,D,P,X                         
+# Define the color of the dots ex 'red' or a color
+# cycle for each observer ex with 3 observers 'red,black,yellow'
+markers_colors: purple,red,teal,darkorange,slategrey,green,black,cyan   
 
 radial_velocity_correction: barycentric               # The kind of velocity correction. Must be ‘barycentric’ or ‘heliocentric’.  
 
