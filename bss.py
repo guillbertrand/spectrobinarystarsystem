@@ -325,7 +325,6 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label= label, ecolor='k', capsize=0,fmt =observers[obs]['instruments'][label], color=observers[obs]['color'], lw=0.7)
         else:
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)    
-        print(s['header']['DATE-OBS'], observers[obs]['instruments'][label])
         xindex = findNearest(model[0], s['phase'])
         axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)            
     
@@ -372,7 +371,6 @@ def plot_2dflux(observations):
     header_list = []
 
     for jd_obs in observations.keys():
-        print(observations[jd_obs]['fits'])
         spectra_filename.append(observations[jd_obs]['fits'])
 
     for spectrum in spectra_filename:
@@ -434,7 +432,7 @@ def plot_2dflux(observations):
 
     # plot the 2D array
     # set the figure size
-    plt.rcParams["figure.figsize"] = (16, 9)
+    plt.rcParams["figure.figsize"] = (conf['fig_size_x'], conf['fig_size_y'])
 
     # set x axis more large
     #plt.rcParams["figure.dpi"] = 100
@@ -545,11 +543,9 @@ if __name__ == '__main__':
               f'f(M) = {params[7]} ± {err[7]}',
               sep='\n')
 
-
-    # Playground
-    p = conf['period'] or conf['period_guess']
-    data = extractObservations(specs, p)
-    plot_2dflux(data)
+        # Playground
+        p = conf['period'] or conf['period_guess']
+        plot_2dflux(data)
 
 
 
