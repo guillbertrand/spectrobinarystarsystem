@@ -531,7 +531,7 @@ if __name__ == '__main__':
         model = plotRadialVelocityCurve(axs[0], params[0], params[1], params[3], params[2], v0, conf['line_color'], 0.8,
                                         0.8)
         plotRadialVelocityDotsFromData(data, params[5], t0, err, axs, model)
-        saveAndShowPlot(axs, t0, params[5])
+        saveAndShowPlot(axs, t0, f'{params[5]} ± {round(err[5],4)} days')
 
         print(f'γ = {params[0]} ± {err[0]}',
               f'K = {params[1]} ± {err[1]}',
