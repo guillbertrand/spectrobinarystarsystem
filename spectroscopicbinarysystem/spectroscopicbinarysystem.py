@@ -43,6 +43,9 @@ from binarystarsolve.binarystarsolve import StarSolve
 #
 
 class SBSpectrum1D(Spectrum1D):
+    """
+    Class which extends the Spectrum1D class to automatically calculate the radial velocity of an absorption line
+    """
     def __init__(self, filename, skycoord, conf):
         self._filename = filename
         self._basename = os.path.basename(filename)
@@ -64,25 +67,46 @@ class SBSpectrum1D(Spectrum1D):
 
             # init Spectrum1D
             super().__init__(flux=flux, wcs=wcs_data)
+
+            # analyse spectrum 
             self.findCenterOfLine()
             self.findRVCorrection()
             self.findRV()
 
     def getObserver(self):
+        """
+        Return 'OBSERVER' header field
+        :return: string corresponding to the observer
+        """
         return self._observer.lower()
     
     def getInstrument(self):
+        """
+        Return 'BSS_INST' header field
+        :return: string corresponding to the instrument
+        :rtype: string
+        """
         return self._header['BSS_INST']
     
     def getRV(self):
+        """
+        Return the final computed radial velocity of the line (already corrected of heliocentric/barycentric velocity)
+        :return: radial velocity 
+        :rtype: float
+        """
         return self._rv.value
 
     def getJD(self):
-        return self._header['JD-OBS']
+        """
+        Return 'JD-OBS' header field
+        :return: float corresponding to the julian date of the observation
+        :rtype: float
+        """
+        return float(self._header['JD-OBS'])
     
     def findRVCorrection(self):
         """
-        Compute the radial velocity correction
+        Compute radial velocity correction in function of the target and the location of the observer
         """
         t = Time(self._header['JD-OBS'], format='jd', scale='utc')
         loc = EarthLocation(self._header['GEO_LONG'], self._header['GEO_LAT'], self._header['GEO_ELEV'] * u.m)
@@ -92,6 +116,7 @@ class SBSpectrum1D(Spectrum1D):
     def findRV(self):
         """
         Compute the radial velocity from a line position and a radial velocity correction
+        Reference line rest position in Angstroms can be customize in conf["LAMBDA_REF"]
         """
         c = const.c.to('km/s')
         self._rv = (c * ((self._center_of_line - self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr 
@@ -147,6 +172,22 @@ class SBSpectrum1D(Spectrum1D):
 #
 
 class SpectroscopicBinarySystem:
+    """
+    Class allowing to dynamically load spectra in fit(s) format and to
+    obtain the orbital solution of a spectroscopic binary system. 
+
+    Also allows to: 
+    - Plot the solution and the measured radial velocity points.
+    - Plot a dynamic 2D spectrum
+
+    :param object_name: Common name of the target for the Simbad query (ex : alpha dra, hd123299)
+    :param spectra_path: Path of all fit(s) spectra
+    :param t0: Allow to fix Periastron epoch T0 if known (julian date)
+    :param period: If the period of the orbit is already known use this param (period in days). 
+    :param perdiod_guess: If the period is uncertain use this param (period in days).
+    :param conf: Allow to customize additionnal parameters (see self._conf default value below)
+    :param debug: Allow to activate log and some additional plots for debug purpose
+    """
     def __init__(self, object_name, spectra_path, t0 = None, period = None, period_guess=None, conf=None, debug=False):
 
         self._conf = {  "LAMBDA_REF" : 6562.82,
