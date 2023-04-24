@@ -136,3 +136,6 @@ pipreqs.bash
 sample/alphadra/bss_debug_result.png
 sample/alphadra/bss_phased_result.png
 sample/alphadra/bss_results.txt
+sample/alphadra/sbs_debug_result.png
+sample/alphadra/sbs_phased_result.png
+sample/alphadra/sbs_results.txt
