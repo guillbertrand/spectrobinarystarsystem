@@ -104,9 +104,33 @@ class SBSpectrum1D(Spectrum1D):
         """
         return float(self._header['JD-OBS'])
     
+    def setPhase(self, phase):
+        """
+        Set phase of the observation
+        :param phase: float corresponding to the phase of the system 
+        """
+        self._phase = phase
+
+    def getPhase(self):
+        """
+        Return the phase of the observation
+        :return: float corresponding to the phase of the system 
+        :rtype: float
+        """
+        return self._phase
+    
+    def getBaseName(self):
+        """
+        Return base filename of the spectra
+        :return: string corresponding to the name of the spectra
+        :rtype: string
+        """
+        return self._basename
+    
     def findRVCorrection(self):
         """
         Compute radial velocity correction in function of the target and the location of the observer
+        :return: None
         """
         t = Time(self._header['JD-OBS'], format='jd', scale='utc')
         loc = EarthLocation(self._header['GEO_LONG'], self._header['GEO_LAT'], self._header['GEO_ELEV'] * u.m)
@@ -117,6 +141,7 @@ class SBSpectrum1D(Spectrum1D):
         """
         Compute the radial velocity from a line position and a radial velocity correction
         Reference line rest position in Angstroms can be customize in conf["LAMBDA_REF"]
+        :return: None
         """
         c = const.c.to('km/s')
         self._rv = (c * ((self._center_of_line - self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr 
@@ -124,6 +149,7 @@ class SBSpectrum1D(Spectrum1D):
     def findCenterOfLine(self):
         """
         Find the center of the line in a spectrum using a fit (models available : Gaussian1D, Lorentz1D, Voigt1D)
+        :return: None
         """
         w1 = float(self._conf['LINE_FITTING_WINDOW_WIDTH']) / 2
         w2 = float(self._conf['LINE_FITTING_FWHM'])*3 / 2
@@ -307,6 +333,56 @@ class SpectroscopicBinarySystem:
         self.__solveSystem()
         return self._orbital_solution
 
+    def __findNearest(self, array, value):
+        """
+        Find the nearest value in an array
+        :param array: array for search
+        :param value: value to find
+        :return: index of the nearest value
+        """
+        array = np.asarray(array)
+        return (np.abs(array - value)).argmin()
+    
+    def __plotRadialVelocityDots(self, axs, t0):
+        """
+        Plot the radial velocity dots from the data
+        :param axs: axes to plot
+        :model t0: Periastron epoch T0 (julian date)
+        :return: None
+        """
+        observers = {}
+        instruments = []
+        color_number = 0
+        period = self._orbital_solution[0][5]
+
+        cmap = plt.get_cmap(self._conf['COLOR_MAPS'][0])
+        for s in self._sb_spectra:
+
+            # compute phase of the sytem
+            jd = s.getJD()
+            phase = self.__getPhase(float(t0), period, jd)
+            s.setPhase(phase)
+            if self._debug:
+                print(f"{s.getBaseName()} phase : {phase}")
+
+            # get the observer
+            obs = s.getObserver()
+            if(obs not in observers.keys()):
+                observers[obs] = cmap( ((5 * color_number) % len(self._sb_spectra)) / len(self._sb_spectra) )
+                color_number += 1
+            color = observers[obs]
+
+            # get the instrument
+            label = "%s - %s…" % (obs, s.getInstrument()[0:30])
+            if(label not in instruments):
+                instruments.append(label)
+                axs[0].errorbar(s.getPhase(), s.getRV(),yerr = 0, label= label, ecolor='k', capsize=0,fmt ='o', color=color, lw=0.7)
+            else:
+                axs[0].errorbar(s.getPhase(), s.getRV(),yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)    
+            xindex = self.__findNearest(self._model_x, s.getPhase())
+            axs[1].errorbar(s.getPhase(), s.getRV()- self._model_y[xindex],yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)            
+        
+
     def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
         if not self._orbital_solution:
             self.__solveSystem()
@@ -332,12 +408,13 @@ class SpectroscopicBinarySystem:
             v0 = 0
 
         # plot orbital solution   
-        model_x = np.arange(0,1.011, 0.001)
-        model_y = list(map(lambda x: self.__computeRadialVelocityCurve(x,self._orbital_solution[0][0],self._orbital_solution[0][1],self._orbital_solution[0][3],self._orbital_solution[0][2],v0), model_x))
-        axs[0].plot(model_x, model_y, 'k', alpha=0.7, lw=0.7, label='Orbital solution')
+        self._model_x = np.arange(0,1.011, 0.001)
+        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(x,v0,self._orbital_solution[0][1],self._orbital_solution[0][3],self._orbital_solution[0][2],self._orbital_solution[0][0]), self._model_x))
+        axs[0].plot(self._model_x, self._model_y, 'k', alpha=0.7, lw=0.7, label='Orbital solution')
+
 
         # plot dots 
-
+        self.__plotRadialVelocityDots(axs, t0)
 
         # plot title & subtitle
         t = ''
