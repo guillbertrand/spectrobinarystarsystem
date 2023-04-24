@@ -228,6 +228,9 @@ class SpectroscopicBinarySystem:
         return (K * (e * np.cos(w) + np.cos(w + f)) + v0)
 
     def __solveSystem(self):
+        """
+        Compute the orbital solution with BinaryStarSolver
+        """
         # write result file for BinaryStarSolver
         with open(f'{self._spectra_path}/sbs_results.txt', 'w') as f:
             for s in self._sb_spectra:
@@ -263,7 +266,7 @@ class SpectroscopicBinarySystem:
         self.__solveSystem()
         return self._orbital_solution
 
-    def plotRadialVelocityCurve(self, title, subtitle, rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
+    def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
         if not self._orbital_solution:
             self.__solveSystem()
 
@@ -302,7 +305,8 @@ class SpectroscopicBinarySystem:
             t += r"$\bf{%s}$ " % (w)
         
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
-        axs[0].set_title("%s\n%s\nT0=%s P=%s" % (t,subtitle,t0,p),fontsize=9,fontweight="0", color='black' )
+        subtitle = f'{subtitle}\nT0={t0} P={p}' if subtitle else f'T0={t0} P={p}'
+        axs[0].set_title("%s\n%s" % (t,subtitle),fontsize=9,fontweight="0", color='black' )
 
         axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple)) 
         axs[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
