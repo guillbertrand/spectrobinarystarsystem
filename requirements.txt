@@ -1,8 +1,9 @@
 astropy==5.2.2
 astroquery==0.4.6
+BinaryStarSolver==1.2.0
 matplotlib==3.7.1
 numpy==1.24.2
-orbitalpy==0.7.0
+orbital==0.0.0
+OrbitalPy==0.7.0
 PyYAML==6.0
 specutils==1.9.1
-BinaryStarSolver==1.2.0
