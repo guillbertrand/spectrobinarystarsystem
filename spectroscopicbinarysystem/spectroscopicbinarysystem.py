@@ -373,14 +373,14 @@ class SpectroscopicBinarySystem:
             color = observers[obs]
 
             # get the instrument
-            label = "%s - %s…" % (obs, s.getInstrument()[0:30])
+            label = f"{obs} - {s.getInstrument()[:30]}…"
             if(label not in instruments):
                 instruments.append(label)
                 axs[0].errorbar(s.getPhase(), s.getRV(),yerr = 0, label= label, ecolor='k', capsize=0,fmt ='o', color=color, lw=0.7)
             else:
-                axs[0].errorbar(s.getPhase(), s.getRV(),yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)    
+                axs[0].errorbar(s.getPhase(), s.getRV(),yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)
             xindex = self.__findNearest(self._model_x, s.getPhase())
-            axs[1].errorbar(s.getPhase(), s.getRV()- self._model_y[xindex],yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)            
+            axs[1].errorbar(s.getPhase(), s.getRV()- self._model_y[xindex],yerr = 0, fmt ='o', ecolor='k', capsize=0,color=color, lw=.7)
         
 
     def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
@@ -416,22 +416,18 @@ class SpectroscopicBinarySystem:
         # plot dots 
         self.__plotRadialVelocityDots(axs, t0)
 
-        # plot title & subtitle
-        t = ''
         split_oname = title.split(' ')
-        for w in split_oname:
-            t += r"$\bf{%s}$ " % (w)
-        
+        t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
         subtitle = f'{subtitle}\nT0={t0} P={p}' if subtitle else f'T0={t0} P={p}'
         axs[0].set_title("%s\n%s" % (t,subtitle),fontsize=9,fontweight="0", color='black' )
 
-        axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple)) 
+        axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
         axs[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
         axs[1].yaxis.set_major_locator(MultipleLocator(residual_y_multiple))
         axs[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
-        
+
         axs[0].legend(bbox_to_anchor=(1, 1), loc="upper left", frameon=False,prop={'size': 8})
         plt.tight_layout(pad=1, w_pad=0, h_pad=1)
         plt.xticks(np.arange(0, 1.01, 0.1))
@@ -440,7 +436,7 @@ class SpectroscopicBinarySystem:
         plt.show()
 
 
-    def plotSpec2DFlux(unit=u.AA):
+    def plotSpec2DFlux(self):
         pass
 
 

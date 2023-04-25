@@ -316,17 +316,17 @@ def plotRadialVelocityDotsFromData(specs, period, jd0, error, axs, model):
             c = [x.strip() for x in conf["markers_colors"].split(',')][i]
             observers[obs] = {'color': c, 'instruments':{}}
             i+=1
-    
+
     for jd, s in specs.items():
         obs = s['header']['OBSERVER'].lower()
-        label = "%s - %s…" % (obs, s['header']['BSS_INST'][0:30])
+        label = f"{obs} - {s['header']['BSS_INST'][:30]}…"
         if(label not in observers[obs]['instruments'].keys()):
             observers[obs]['instruments'][label] =  [x.strip() for x in conf["markers_styles"].split(',')][len(observers[obs]['instruments'])]
             axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, label= label, ecolor='k', capsize=0,fmt =observers[obs]['instruments'][label], color=observers[obs]['color'], lw=0.7)
         else:
-            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)    
+            axs[0].errorbar(s['phase'], s['radial_velocity'][0].value,yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)
         xindex = findNearest(model[0], s['phase'])
-        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)            
+        axs[1].errorbar(s['phase'], s['radial_velocity'][0].value- model[1][xindex],yerr = 0, fmt =observers[obs]['instruments'][label], ecolor='k', capsize=0,color=observers[obs]['color'], lw=.7)
     
 
 def saveAndShowPlot(ax, t0, p):
@@ -335,19 +335,16 @@ def saveAndShowPlot(ax, t0, p):
     :param ax: axes to plot
     :return: None
     """
-    t = ''
     split_oname = conf['title'].split(' ')
-    for w in split_oname:
-        t += r"$\bf{%s}$ " % (w)
-    
+    t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
     ax[0].set_title("%s\n%s\nT0=%s P=%s" % (t,conf['subtitle'],t0,p),fontsize=conf['title_font_size'],fontweight="0", color='black' )
 
-    ax[0].yaxis.set_major_locator(MultipleLocator(conf['fig_rv_y_multiple'])) 
+    ax[0].yaxis.set_major_locator(MultipleLocator(conf['fig_rv_y_multiple']))
     ax[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
     ax[1].yaxis.set_major_locator(MultipleLocator(conf['fig_residual_y_multiple']))
     ax[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
-    
+
     ax[0].legend(bbox_to_anchor=(1, 1), loc="upper left", frameon=False,prop={'size': 8})
     plt.tight_layout(pad=1, w_pad=0, h_pad=1)
     plt.xticks(np.arange(0, 1.01, 0.1))
@@ -366,13 +363,12 @@ def interpolate_spectrum(spectrum, new_wavelengths):
 # /!\ needs to be cleaned up and upgrade for radial velocity
 def plot_2dflux(observations):
 
-    spectra_filename = []
     spec1d = []
     header_list = []
 
-    for jd_obs in observations.keys():
-        spectra_filename.append(observations[jd_obs]['fits'])
-
+    spectra_filename = [
+        observations[jd_obs]['fits'] for jd_obs in observations.keys()
+    ]
     for spectrum in spectra_filename:
         f = fits.open(spectrum)
         specdata = f[0].data
