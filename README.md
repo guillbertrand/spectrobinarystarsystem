@@ -39,5 +39,5 @@ sbs.plotlyRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities")
 ```
 
-![results](https://github.com/guillbertrand/spectrobinarystarsystem/examples/sbs_phased_result.png)
+![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/sbs_phased_result.png)
 
