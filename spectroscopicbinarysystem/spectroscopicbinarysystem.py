@@ -156,9 +156,9 @@ class SBSpectrum1D(Spectrum1D):
         Find the center of the line in a spectrum using a fit (models available : Gaussian1D, Lorentz1D, Voigt1D)
         :return: None
         """
-        w1 = float(self._conf['LINE_FITTING_WINDOW_WIDTH']) / 2
-        w2 = float(self._conf['LINE_FITTING_FWHM'])*3 / 2
-        fwhm = float(self._conf['LINE_FITTING_FWHM'])
+        w1 = float(self._conf['LINE_FIT_WINDOW_WIDTH']) / 2
+        w2 = float(self._conf['LINE_FIT_CONT_NORM_EXCLUDE_WIDTH']) / 2
+        fwhm = float(self._conf['LINE_FIT_FWHM'])
 
         # [2:-2] > Hack to excude first and last value of the spectra.
         # Sometimes fist value for the intensity is equal to 0.00 and prevents finding the true minima.
@@ -174,7 +174,7 @@ class SBSpectrum1D(Spectrum1D):
         invert_s = invert_s / s_fit(invert_s.spectral_axis)
         invert_s = invert_s - 1
 
-        match self._conf['LINE_FITTING_MODEL']:
+        match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
                 g_init = models.Gaussian1D(
                     mean=xpeak, amplitude=invert_s.flux.argmax())
@@ -192,7 +192,7 @@ class SBSpectrum1D(Spectrum1D):
             xpeak - (w2 * u.AA), xpeak + (w2 * u.AA)))
         y_fit = g_fit(invert_s.spectral_axis)
 
-        match self._conf['LINE_FITTING_MODEL']:
+        match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
                 center = g_fit.mean
             case _:
@@ -229,9 +229,10 @@ class SpectroscopicBinarySystem:
     def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, debug=False):
 
         self._conf = {"LAMBDA_REF": 6562.82,
-                      "LINE_FITTING_MODEL": "voigt",
-                      "LINE_FITTING_WINDOW_WIDTH": 10,
-                      "LINE_FITTING_FWHM": .5,
+                      "LINE_FIT_MODEL": "voigt",
+                      "LINE_FIT_WINDOW_WIDTH": 10,
+                      "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
+                      "LINE_FIT_FWHM": .5,
                       "RV_CORR_TYPE": "barycentric",
                       "SB_TYPE": 1}
 
