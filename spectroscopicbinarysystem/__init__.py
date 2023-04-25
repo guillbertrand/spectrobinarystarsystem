@@ -409,14 +409,14 @@ class SpectroscopicBinarySystem:
                 instruments[label] = markers_style[marker_index[obs]]
                 marker_index[obs] += 1
                 axs[0].errorbar(s.getPhase(), s.getRV(
-                ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7)
+                ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=4)
             else:
                 axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7)
+                                fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=4)
 
             xindex = self.__findNearest(self._model_x, s.getPhase())
             axs[1].errorbar(s.getPhase(), s.getRV() - self._model_y[xindex],
-                            yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7)
+                            yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=4)
 
     def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
         if not self._orbital_solution:
@@ -627,7 +627,11 @@ class SpectroscopicBinarySystem:
             font=dict(
                 family=font_family,
                 size=int(font_size)+2,
+<<<<<<< HEAD
                 color="black",
+=======
+                color="black"
+>>>>>>> master
             )
         )
 
