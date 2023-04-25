@@ -34,7 +34,7 @@ from specutils.fitting import fit_lines, fit_generic_continuum
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
-#plotly
+# plotly
 import plotly.graph_objects as go
 
 # orbitalpy
@@ -96,7 +96,7 @@ class SBSpectrum1D(Spectrum1D):
     def getRV(self):
         """
         Return the final computed radial velocity of the line (already corrected of heliocentric/barycentric velocity)
-        :return: radial velocity 
+        :return: radial velocity
         :rtype: float
         """
         return self._rv.value
@@ -120,14 +120,14 @@ class SBSpectrum1D(Spectrum1D):
     def setPhase(self, phase):
         """
         Set phase of the observation
-        :param phase: float corresponding to the phase of the system 
+        :param phase: float corresponding to the phase of the system
         """
         self._phase = phase
 
     def getPhase(self):
         """
         Return the phase of the observation
-        :return: float corresponding to the phase of the system 
+        :return: float corresponding to the phase of the system
         :rtype: float
         """
         return self._phase
@@ -222,16 +222,16 @@ class SBSpectrum1D(Spectrum1D):
 class SpectroscopicBinarySystem:
     """
     Class allowing to dynamically load spectra in fit(s) format and to
-    obtain the orbital solution of a spectroscopic binary system. 
+    obtain the orbital solution of a spectroscopic binary system.
 
-    Also allows to: 
+    Also allows to:
     - Plot the solution and the measured radial velocity points.
     - Plot a dynamic 2D spectrum
 
     :param object_name: Common name of the target for the Simbad query (ex : alpha dra, hd123299)
     :param spectra_path: Path of all fit(s) spectra
     :param t0: Allow to fix Periastron epoch T0 if known (julian date)
-    :param period: If the period of the orbit is already known use this param (period in days). 
+    :param period: If the period of the orbit is already known use this param (period in days).
     :param perdiod_guess: If the period is uncertain use this param (period in days).
     :param conf: Allow to customize additionnal parameters (see self._conf default value below)
     :param debug: Allow to activate log and some additional plots for debug purpose
@@ -510,7 +510,8 @@ class SpectroscopicBinarySystem:
         if (self._t0):
 
             t0 = self._t0
-            phase1 = self.__getPhase(t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
+            phase1 = self.__getPhase(
+                t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
             phase2 = 1.0
             v0 = phase1 - phase2
         # Else use t0 compute by the model
@@ -526,20 +527,24 @@ class SpectroscopicBinarySystem:
                                                                              self._orbital_solution[0][2],
                                                                              self._orbital_solution[0][0]),
                                  self._model_x))
-        fig.add_trace(go.Scatter(x=self._model_x, y=self._model_y, mode='lines', name='Orbital solution'))
+        fig.add_trace(go.Scatter(x=self._model_x, y=self._model_y,
+                      mode='lines', name='Orbital solution', line=dict(color='black', width=1)))
 
         observers = {}
+        marker_index = {}
+        instruments = {}
         color_number = 0
         period = self._orbital_solution[0][5]
 
-        #cmap = plt.get_cmap(self._conf['COLOR_MAPS'][0])
         cmap = plt.get_cmap('tab20')
-        markers_style = ["o", "v", "^", "s", "D", "P", "X"]
 
         # define colors (max 60 distinct observers)
         colors = cmap((np.arange(20)).astype(int), alpha=1)
         + cmap((np.arange(20)).astype(int), alpha=.75)
         + cmap((np.arange(20)).astype(int), alpha=.5)
+
+        markers_style = ['circle', 'square',
+                         'diamond', 'triangle-up', 'triangle-down']
 
         for s in self._sb_spectra:
 
@@ -553,28 +558,44 @@ class SpectroscopicBinarySystem:
             # get the observer
             obs = s.getObserver()
             if (obs not in observers.keys()):
-                observers[obs] = cmap(((5 * color_number) % len(self._sb_spectra)) / len(self._sb_spectra))
+                rgb = colors[color_number][:3] * 255
+                str_rgb = ",".join([str(rgb[0]), str(rgb[1]), str(rgb[2])])
+                observers[obs] = f'rgba({str_rgb}, {colors[color_number][3]})'
                 color_number += 1
             color = observers[obs]
 
             # set label
             label = f"{obs} - {s.getDate()}"
 
-            fig.add_trace(
-                go.Scatter(x=[phase], y=[s.getRV()], mode='markers', name=label, marker=dict(color=color,
-                                                                                             size=7)))
+            # get the instrument
+
+            label = f"{obs} - {s.getInstrument()[:30]}…"
+            if (label not in instruments.keys()):
+                if not obs in marker_index:
+                    marker_index[obs] = 0
+                instruments[label] = markers_style[marker_index[obs]]
+                marker_index[obs] += 1
+                fig.add_trace(
+                    go.Scatter(x=[phase], y=[s.getRV()], mode='markers', name=label, marker_symbol=instruments[label], marker=dict(color=color,
+                                                                                                                                   size=8), showlegend=True))
+            else:
+                fig.add_trace(
+                    go.Scatter(x=[phase], y=[s.getRV()], mode='markers', marker_symbol=instruments[label], marker=dict(color=color,
+                                                                                                                       size=8), showlegend=False))
 
             # set hover text size
-            fig.update_traces(hovertemplate=None, hoverlabel=dict(font_size=16))
+            fig.update_traces(hovertemplate=None,
+                              hoverlabel=dict(font_size=16))
 
             # set hover text config
             fig.update_layout(hovermode="x unified",
                               hoverlabel=dict(bgcolor="white",
                                               font_size=10))
 
+        p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
+        title += f' T0={t0} P={p}'
         fig.update_layout(
             title=title,
-            showlegend=False,
             xaxis=dict(
                 tickmode='array',
                 tickvals=np.arange(0, 1.01, 0.1),
@@ -584,7 +605,7 @@ class SpectroscopicBinarySystem:
             yaxis_title="Radial velocity [km $s^{-1}$]",
             font=dict(
                 family=font_family,
-                size=font_size,
+                size=int(font_size)+2,
                 color="black"
             )
         )
