@@ -403,8 +403,8 @@ class SpectroscopicBinarySystem:
             # get the instrument
 
             label = f"{obs} - {s.getInstrument()[:30]}…"
-            if (label not in instruments.keys()):
-                if not obs in marker_index:
+            if label not in instruments.keys():
+                if obs not in marker_index:
                     marker_index[obs] = 0
                 instruments[label] = markers_style[marker_index[obs]]
                 marker_index[obs] += 1
@@ -438,7 +438,7 @@ class SpectroscopicBinarySystem:
                     linewidth=0.5, axis='both', which='both')
 
         # If self._t0 compute phase delta between T0 of the model and the fixed value
-        if (self._t0):
+        if self._t0:
             t0 = self._t0
             phase1 = self.__getPhase(
                 t0, self._orbital_solution[0][5], self._orbital_solution[0][4]+2400000)
@@ -480,15 +480,11 @@ class SpectroscopicBinarySystem:
             plt.savefig(f'{self._spectra_path}/sbs_phased_result.png', dpi=dpi)
         plt.show()
 
-    def plotlyRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5,
-                                  font_family='monospace', font_size=9, show=True):
+    def plotlyRadialVelocityCurve(self, title, font_family='monospace', font_size=9, show=True, group_by_instrument=True):
         """
         Plot the radial velocity curve using plotly
         # Todo : update parameters and link to yaml config file
         :param title:
-        :param subtitle:
-        :param rv_y_multiple:
-        :param residual_y_multiple:
         :param font_family:
         :param font_size:
         :param show:
@@ -555,23 +551,44 @@ class SpectroscopicBinarySystem:
                 color_number += 1
             color = observers[obs]
 
-            # set label
-            label = f"{obs} - {s.getDate()}"
-
-            # get the instrument
-            label = f"{obs} - {s.getInstrument()[:30]}…"
-            if (label not in instruments.keys()):
-                if not obs in marker_index:
-                    marker_index[obs] = 0
-                instruments[label] = markers_style[marker_index[obs]]
-                marker_index[obs] += 1
+            if group_by_instrument:
+                # get the instrument
+                label = f"{obs} - {s.getInstrument()[:30]}…"
+                if label in instruments:
+                    fig.add_trace(
+                        go.Scatter(x=[phase],
+                                   y=[s.getRV()],
+                                   mode='markers',
+                                   marker_symbol=instruments[label],
+                                   marker=dict(color=color,
+                                               size=8),
+                                   showlegend=False))
+                else:
+                    if obs not in marker_index:
+                        marker_index[obs] = 0
+                    instruments[label] = markers_style[marker_index[obs]]
+                    marker_index[obs] += 1
+                    fig.add_trace(
+                        go.Scatter(x=[phase],
+                                   y=[s.getRV()],
+                                   mode='markers',
+                                   name=label,
+                                   marker_symbol=instruments[label],
+                                   marker=dict(color=color,
+                                               size=8),
+                                   showlegend=True))
+            else: # no grouping
+                # set label to date
+                label = f"{obs} - {s.getDate()}"
                 fig.add_trace(
-                    go.Scatter(x=[phase], y=[s.getRV()], mode='markers', name=label, marker_symbol=instruments[label], marker=dict(color=color,
-                                                                                                                                   size=8), showlegend=True))
-            else:
-                fig.add_trace(
-                    go.Scatter(x=[phase], y=[s.getRV()], mode='markers', marker_symbol=instruments[label], marker=dict(color=color,
-                                                                                                                       size=8), showlegend=False))
+                    go.Scatter(x=[phase],
+                               y=[s.getRV()],
+                               mode='markers',
+                               name=label,
+                               marker_symbol='circle',
+                               marker=dict(color=color,
+                                           size=8),
+                               showlegend=False))
 
             # set hover text size
             fig.update_traces(hovertemplate=None,
@@ -599,7 +616,7 @@ class SpectroscopicBinarySystem:
                 mirror=True
             ),
             xaxis_title="Phase",
-            yaxis_title="Radial velocity [km $s^{-1}$]",
+            yaxis_title="Radial Velocity (km/s)",
             yaxis=dict(
                 ticks='outside',
                 showline=True,
@@ -611,7 +628,6 @@ class SpectroscopicBinarySystem:
                 family=font_family,
                 size=int(font_size)+2,
                 color="black",
-
             )
         )
 
