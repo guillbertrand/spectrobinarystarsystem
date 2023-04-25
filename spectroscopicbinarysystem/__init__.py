@@ -1,10 +1,6 @@
-
-import logging
 import re
 import os
 import math
-import argparse
-import yaml
 import warnings
 
 # numpy
@@ -22,17 +18,15 @@ from astropy import constants as const
 
 # astroquery
 from astroquery.simbad import Simbad
-from matplotlib.colors import LogNorm
 
 # specutils
 from specutils import Spectrum1D, SpectralRegion
-from specutils.manipulation import noise_region_uncertainty, extract_region
-from specutils.analysis import centroid
+from specutils.manipulation import extract_region
 from specutils.fitting import fit_lines, fit_generic_continuum
 
 # matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+from matplotlib.ticker import (MultipleLocator)
 
 # plotly
 import plotly.graph_objects as go
@@ -547,13 +541,10 @@ class SpectroscopicBinarySystem:
                          'diamond', 'triangle-up', 'triangle-down']
 
         for s in self._sb_spectra:
-
             # compute phase of the sytem
             jd = s.getJD()
             phase = self.__getPhase(float(t0), period, jd)
             s.setPhase(phase)
-            if self._debug:
-                print(f"{s.getBaseName()} phase : {phase}")
 
             # get the observer
             obs = s.getObserver()
@@ -568,7 +559,6 @@ class SpectroscopicBinarySystem:
             label = f"{obs} - {s.getDate()}"
 
             # get the instrument
-
             label = f"{obs} - {s.getInstrument()[:30]}…"
             if (label not in instruments.keys()):
                 if not obs in marker_index:
@@ -594,19 +584,34 @@ class SpectroscopicBinarySystem:
 
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
         title += f' T0={t0} P={p}'
+
         fig.update_layout(
             title=title,
+            plot_bgcolor='white',
             xaxis=dict(
+                ticks='outside',
+                showline=True,
                 tickmode='array',
                 tickvals=np.arange(0, 1.01, 0.1),
-                ticktext=[f'{round(i, 2)}' for i in np.arange(0, 1.01, 0.1)]
+                gridcolor='lightgrey',
+                linecolor='black',
+                ticktext=[f'{round(i, 2)}' for i in np.arange(0, 1.01, 0.1)],
+                mirror=True
             ),
             xaxis_title="Phase",
             yaxis_title="Radial velocity [km $s^{-1}$]",
+            yaxis=dict(
+                ticks='outside',
+                showline=True,
+                linecolor='black',
+                gridcolor='lightgrey',
+                mirror=True
+            ),
             font=dict(
                 family=font_family,
                 size=int(font_size)+2,
-                color="black"
+                color="black",
+
             )
         )
 
