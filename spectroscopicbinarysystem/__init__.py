@@ -627,11 +627,7 @@ class SpectroscopicBinarySystem:
             font=dict(
                 family=font_family,
                 size=int(font_size)+2,
-<<<<<<< HEAD
                 color="black",
-=======
-                color="black"
->>>>>>> master
             )
         )
 
