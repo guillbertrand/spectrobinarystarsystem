@@ -34,6 +34,9 @@ from specutils.fitting import fit_lines, fit_generic_continuum
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
+#plotly
+import plotly.graph_objects as go
+
 # orbitalpy
 from orbital import utilities
 
@@ -105,6 +108,14 @@ class SBSpectrum1D(Spectrum1D):
         :rtype: float
         """
         return float(self._header['JD-OBS'])
+
+    def getDate(self):
+        """
+        Return 'DATE-OBS' header field
+        :return: string corresponding to the date of the observation
+        :rtype: string
+        """
+        return self._header['DATE-OBS']
 
     def setPhase(self, phase):
         """
@@ -474,6 +485,115 @@ class SpectroscopicBinarySystem:
         if savefig:
             plt.savefig(f'{self._spectra_path}/sbs_phased_result.png', dpi=dpi)
         plt.show()
+
+    def plotlyRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5,
+                                  font_family='monospace', font_size=9, show=True):
+        """
+        Plot the radial velocity curve using plotly
+        # Todo : update parameters and link to yaml config file
+        :param title:
+        :param subtitle:
+        :param rv_y_multiple:
+        :param residual_y_multiple:
+        :param font_family:
+        :param font_size:
+        :param show:
+        :return: fig
+        """
+
+        if not self._orbital_solution:
+            self.__solveSystem()
+
+        fig = go.Figure()
+
+        # If self._t0 compute phase delta between T0 of the model and the fixed value
+        if (self._t0):
+
+            t0 = self._t0
+            phase1 = self.__getPhase(t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
+            phase2 = 1.0
+            v0 = phase1 - phase2
+        # Else use t0 compute by the model
+        else:
+            t0 = self._orbital_solution[0][4] + 2400000
+            v0 = 0
+
+        # plot orbital solution
+        self._model_x = np.arange(0, 1.011, 0.001)
+
+        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(x, v0, self._orbital_solution[0][1],
+                                                                             self._orbital_solution[0][3],
+                                                                             self._orbital_solution[0][2],
+                                                                             self._orbital_solution[0][0]),
+                                 self._model_x))
+        fig.add_trace(go.Scatter(x=self._model_x, y=self._model_y, mode='lines', name='Orbital solution'))
+
+        observers = {}
+        color_number = 0
+        period = self._orbital_solution[0][5]
+
+        #cmap = plt.get_cmap(self._conf['COLOR_MAPS'][0])
+        cmap = plt.get_cmap('tab20')
+        markers_style = ["o", "v", "^", "s", "D", "P", "X"]
+
+        # define colors (max 60 distinct observers)
+        colors = cmap((np.arange(20)).astype(int), alpha=1)
+        + cmap((np.arange(20)).astype(int), alpha=.75)
+        + cmap((np.arange(20)).astype(int), alpha=.5)
+
+        for s in self._sb_spectra:
+
+            # compute phase of the sytem
+            jd = s.getJD()
+            phase = self.__getPhase(float(t0), period, jd)
+            s.setPhase(phase)
+            if self._debug:
+                print(f"{s.getBaseName()} phase : {phase}")
+
+            # get the observer
+            obs = s.getObserver()
+            if (obs not in observers.keys()):
+                observers[obs] = cmap(((5 * color_number) % len(self._sb_spectra)) / len(self._sb_spectra))
+                color_number += 1
+            color = observers[obs]
+
+            # set label
+            label = f"{obs} - {s.getDate()}"
+
+            fig.add_trace(
+                go.Scatter(x=[phase], y=[s.getRV()], mode='markers', name=label, marker=dict(color=color,
+                                                                                             size=7)))
+
+            # set hover text size
+            fig.update_traces(hovertemplate=None, hoverlabel=dict(font_size=16))
+
+            # set hover text config
+            fig.update_layout(hovermode="x unified",
+                              hoverlabel=dict(bgcolor="white",
+                                              font_size=10))
+
+        fig.update_layout(
+            title=title,
+            showlegend=False,
+            xaxis=dict(
+                tickmode='array',
+                tickvals=np.arange(0, 1.01, 0.1),
+                ticktext=[f'{round(i, 2)}' for i in np.arange(0, 1.01, 0.1)]
+            ),
+            xaxis_title="Phase",
+            yaxis_title="Radial velocity [km $s^{-1}$]",
+            font=dict(
+                family=font_family,
+                size=font_size,
+                color="black"
+            )
+        )
+
+        # plot
+        if show:
+            fig.show()
+
+        return fig
 
     def plotSpec2DFlux(self):
         pass

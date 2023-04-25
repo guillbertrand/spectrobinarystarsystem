@@ -6,3 +6,4 @@ orbitalpy==0.7.0
 PyYAML==6.0
 specutils==1.9.1
 BinaryStarSolver==1.2.0
+plotly==5.14.1

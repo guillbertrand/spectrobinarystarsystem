@@ -32,3 +32,15 @@ fig_size_y: 7
 fig_rv_y_multiple: 10
 fig_residual_y_multiple: 0.5
 dpi: 150
+
+
+# plotly options
+plotly_width: 1000
+plotly_height: 600
+plotly_font_size: 9
+plotly_title_font_size: 9
+plotly_font_family: monospace
+plotly_dpi: 150
+plotly_show_title: true
+plotly_show_subtitle: true
+plotly_show_legend: true
