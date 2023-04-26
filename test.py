@@ -10,5 +10,6 @@ sbs = SpectroscopicBinarySystem(
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities", savefig=True)
 
-sbs.plotlyRadialVelocityCurve(
-    title="α Dra - HD123299 - Phased radial velocities")
+# sbs.plotlyRadialVelocityCurve(
+#     title="α Dra - HD123299 - Phased radial velocities",
+#     group_by_instrument=False)

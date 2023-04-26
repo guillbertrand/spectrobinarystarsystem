@@ -409,14 +409,14 @@ class SpectroscopicBinarySystem:
                 instruments[label] = markers_style[marker_index[obs]]
                 marker_index[obs] += 1
                 axs[0].errorbar(s.getPhase(), s.getRV(
-                ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=4)
+                ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
             else:
                 axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=4)
+                                fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
             xindex = self.__findNearest(self._model_x, s.getPhase())
             axs[1].errorbar(s.getPhase(), s.getRV() - self._model_y[xindex],
-                            yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=4)
+                            yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
     def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
         if not self._orbital_solution:
@@ -577,7 +577,7 @@ class SpectroscopicBinarySystem:
                                    marker=dict(color=color,
                                                size=8),
                                    showlegend=True))
-            else: # no grouping
+            else:  # no grouping
                 # set label to date
                 label = f"{obs} - {s.getDate()}"
                 fig.add_trace(
