@@ -155,6 +155,16 @@ class SBSpectrum1D(Spectrum1D):
         c = const.c.to('km/s')
         self._rv = (c * ((self._center_of_line -
                     self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr
+        
+    def getCenterOfLine(self):
+        """
+        Return the center of the line computed for the spectrum using a fit (non corrected from heliocentric/barycentric velocity)
+        :return: Float
+        """
+        return self._center_of_line
+
+    def getDebugLineFitting(self):
+        return self._debug_line_fitting
 
     def findCenterOfLine(self):
         """
@@ -204,8 +214,7 @@ class SBSpectrum1D(Spectrum1D):
             case _:
                 center = g_fit.x_0
 
-        self._debug_line_fitting = {
-            'extracted_profil': invert_s, 'fit_solution': y_fit}
+        self._debug_line_fitting = (invert_s, y_fit)
         self._center_of_line = center.value
 
     def __str__(self):
@@ -257,7 +266,9 @@ class SpectroscopicBinarySystem:
         if conf:
             self._conf.update(conf)
 
+        print('** SpectroscopicBinarySystem **')
         self.__findObjectCoordinate()
+        print('Load spectra...')
         self.__loadSpectra()
 
     def __findObjectCoordinate(self):
@@ -281,6 +292,23 @@ class SpectroscopicBinarySystem:
                         print(sbSpec1D)
         if self._debug:
             print(f'{len(self._sb_spectra)} processed spectra')
+            plt.rcParams['font.size'] = '6'
+            plt.rcParams['font.family'] = 'monospace'
+            grid_size = math.ceil(len(self._sb_spectra)**.5)
+            fig, axs = plt.subplots(grid_size,grid_size, figsize=(13,7), sharex=True, sharey=True)
+            for i, s in enumerate(self._sb_spectra):
+                ax = axs.flat[i]
+                extracted_profil, line_fitting = s.getDebugLineFitting()
+                ax.set_title(f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
+                ax.grid(True)
+                ax.tick_params(axis='both', which='major', labelsize=6)
+                ax.tick_params(axis='both', which='minor', labelsize=6)
+                ax.plot(extracted_profil.spectral_axis.to(u.AA), extracted_profil.flux, color="k")
+                ax.plot(extracted_profil.spectral_axis.to(u.AA), line_fitting, color="r")
+                ax.axvline(x=s.getCenterOfLine(), color='r', linestyle='-',lw=0.7)
+            plt.tight_layout(pad=0.8, w_pad=2, h_pad=1)
+            plt.savefig(f'{self._spectra_path}/sbs_debug_result.png', dpi=150)
+            plt.show()
 
     def __getPhase(self, jd0, period, jd):
         """
@@ -334,18 +362,17 @@ class SpectroscopicBinarySystem:
 
         self._orbital_solution = (params, err, cov)
 
-        if self._debug:
-            print(
-                f'{self._object_name} orbital solution',
-                f'- γ = {params[0]} ± {err[0]}',
-                f'- K = {params[1]} ± {err[1]}',
-                f'- ω = {params[2]} ± {err[2]}',
-                f'- e = {params[3]} ± {err[3]}',
-                f'- T0 = {params[4]} ± {err[4]}',
-                f'- P = {params[5]} ± {err[5]}',
-                f'- a = {params[6]} ± {err[6]}',
-                f'- f(M) = {params[7]} ± {err[7]}',
-                sep='\n')
+        print(
+            f'{self._object_name} orbital solution with {len(self._sb_spectra)} spectra',
+            f'- γ = {params[0]} ± {err[0]}',
+            f'- K = {params[1]} ± {err[1]}',
+            f'- ω = {params[2]} ± {err[2]}',
+            f'- e = {params[3]} ± {err[3]}',
+            f'- T0 = {params[4]} ± {err[4]}',
+            f'- P = {params[5]} ± {err[5]}',
+            f'- a = {params[6]} ± {err[6]}',
+            f'- f(M) = {params[7]} ± {err[7]}',
+            sep='\n')
 
     def getOrbitalSolution(self):
         self.__solveSystem()
