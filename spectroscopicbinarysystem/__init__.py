@@ -255,7 +255,7 @@ class SpectroscopicBinarySystem:
 
         # load user configuration or defaults
         if conf:
-            self._conf = self._conf.update(conf)
+            self._conf.update(conf)
 
         self.__findObjectCoordinate()
         self.__loadSpectra()

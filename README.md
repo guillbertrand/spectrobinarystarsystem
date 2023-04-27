@@ -30,6 +30,15 @@ sbs = SpectroscopicBinarySystem(
     spectra_path='./examples/alphadra/',
     t0=2451441.804,
     period_guess=51,
+    conf={
+        "LAMBDA_REF": 6562.82,
+        "LINE_FIT_MODEL": "voigt",
+        "LINE_FIT_WINDOW_WIDTH": 10,
+        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
+        "LINE_FIT_FWHM": .5,
+        "RV_CORR_TYPE": "barycentric",
+        "SB_TYPE": 1
+    },
     debug=True)
 
 # plot result with matplotlib and save the results
