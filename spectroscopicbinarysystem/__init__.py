@@ -294,8 +294,8 @@ class SpectroscopicBinarySystem:
             print(f'{len(self._sb_spectra)} processed spectra')
             plt.rcParams['font.size'] = '6'
             plt.rcParams['font.family'] = 'monospace'
-            grid_size = math.ceil(len(self._sb_spectra)**.5)
-            fig, axs = plt.subplots(grid_size,grid_size, figsize=(13,7), sharex=True, sharey=True)
+            grid_size = math.ceil(len(self._sb_spectra)/6)
+            fig, axs = plt.subplots(6,grid_size, figsize=(13,7), sharex=True, sharey=True)
             for i, s in enumerate(self._sb_spectra):
                 ax = axs.flat[i]
                 extracted_profil, line_fitting = s.getDebugLineFitting()
