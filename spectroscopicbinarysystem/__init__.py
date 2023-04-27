@@ -165,11 +165,12 @@ class SBSpectrum1D(Spectrum1D):
         w2 = float(self._conf['LINE_FIT_CONT_NORM_EXCLUDE_WIDTH']) / 2
         fwhm = float(self._conf['LINE_FIT_FWHM'])
 
-        # [2:-2] > Hack to excude first and last value of the spectra.
-        # Sometimes fist value for the intensity is equal to 0.00 and prevents finding the true minima.
+        # > Hack to replace zero values of the spectra.
+        # Sometimes first value for the intensity is equal to 0.00 and prevents finding the true minima.
         # Ex : sample/alphadra/_alphadra_20230406_856.fits
-        ipeak = self.flux[2:-2].argmin()
-        xpeak = self.spectral_axis[ipeak+2].to(u.AA)
+        self.flux[self.flux == 0] = 1 * u.Jy
+        ipeak = self.flux.argmin()
+        xpeak = self.spectral_axis[ipeak].to(u.AA)
 
         invert_s = extract_region(Spectrum1D(flux=self.flux * -1, wcs=self.wcs),
                                   SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA)))
