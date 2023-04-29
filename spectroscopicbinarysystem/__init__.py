@@ -12,7 +12,7 @@ from astropy.time import Time
 import astropy.units as u
 import astropy.wcs as fitswcs
 from astropy.time import Time
-from astropy.coordinates import SkyCoord, EarthLocation
+from astropy.coordinates import SkyCoord, EarthLocation, SpectralCoord
 from astropy.modeling import models
 from astropy import constants as const
 
@@ -21,7 +21,7 @@ from astroquery.simbad import Simbad
 
 # specutils
 from specutils import Spectrum1D, SpectralRegion
-from specutils.manipulation import extract_region
+from specutils.manipulation import extract_region, LinearInterpolatedResampler
 from specutils.fitting import fit_lines, fit_generic_continuum
 
 # matplotlib
@@ -678,5 +678,82 @@ class SpectroscopicBinarySystem:
 
         return fig
 
-    def plotSpec2DFlux(self):
-        pass
+    def plotSpec2DFlux(self, title, subtitle="", savefig=False, dpi=150, font_family='monospace', font_size=9):
+        """
+        Plot the 2d dynamic spectra
+        :param title:
+        :param font_family:
+        :param font_size:
+        :param show:
+        :return: fig
+        """
+        plt.rcParams['font.size'] = font_size
+        plt.rcParams['font.family'] = font_family
+
+        if not self._orbital_solution:
+            self.__solveSystem()
+
+        period = self._orbital_solution[0][5]
+        # If self._t0 compute phase delta between T0 of the model and the fixed value
+        if (self._t0):
+
+            t0 = self._t0
+            phase1 = self.__getPhase(
+                t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
+            phase2 = 1.0
+            v0 = phase1 - phase2
+        # Else use t0 compute by the model
+        else:
+            t0 = self._orbital_solution[0][4] + 2400000
+            v0 = 0
+
+        for s in self._sb_spectra:
+            # compute phase of the sytem
+            jd = s.getJD()
+            phase = self.__getPhase(float(t0), period, jd)
+            s.setPhase(phase)
+
+        # sort sb spectra by phase
+        self._sb_spectra.sort(key=lambda x: x.getPhase())
+
+        # create y axis range (phase)
+        y_phase = np.arange(0, 1.01, 0.015)
+        # create x axis range (wavelength) and convert to km/s
+        resample_grid = np.arange(6550, 6576, 0.01)
+        sc = SpectralCoord(resample_grid, unit='AA')
+        wv_to_kms = sc.to(u.km / u.s, doppler_convention='optical',
+                          doppler_rest=6562.82 * u.AA)
+        spec2d = np.zeros((len(wv_to_kms), len(y_phase)))
+
+        # resample each spectrum
+        for s in self._sb_spectra:
+            fluxc_resample = LinearInterpolatedResampler()
+            output_spectrum1D = fluxc_resample(s, sc)
+            phase = s.getPhase()
+            indice = int(round(phase, 2) * len(y_phase))
+            spec2d[:, indice] = output_spectrum1D.flux
+
+        # prepare imshow
+        plt.rcParams["figure.figsize"] = (8, 7)
+        fig, ax = plt.subplots()
+        ax.imshow(np.rot90(spec2d), extent=[wv_to_kms.min().value,
+                                            wv_to_kms.max().value, 0, 1], aspect='auto')
+
+        ax.set_ylabel('Phase', fontdict=None,
+                      labelpad=None, fontname='monospace', size=9)
+        ax.set_xlabel(
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='monospace', size=9)
+
+        split_oname = title.split(' ')
+        t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
+        p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
+        subtitle = f'{subtitle}\nT0={t0} P={p}' if subtitle else f'T0={t0} P={p}'
+        ax.set_title("%s\n%s" % (t, subtitle), fontsize=9,
+                     fontweight="0", color='black')
+
+        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+        plt.yticks(np.arange(0, 1.01, 0.1))
+        if savefig:
+            plt.savefig(
+                f'{self._spectra_path}/sbs_2d_spectrum_result.png', dpi=dpi)
+        plt.show()

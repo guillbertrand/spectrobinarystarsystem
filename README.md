@@ -59,9 +59,18 @@ sbs.plotRadialVelocityCurve(title="α Dra - HD123299 - Phased radial velocities"
 # display result with plotly
 sbs.plotlyRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities")
+
+# plot 2d dynamic spectrum
+sbs.plotSpec2DFlux(
+    title="α Dra - HD123299 - 2d dynamic spectrum",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
+    savefig=False
+)
 ```
 
 ![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/sbs_phased_result.png)
+
+![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/sbs_2d_spectrum_result.png)
 
 ![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/sbs_debug_result.png)
 
