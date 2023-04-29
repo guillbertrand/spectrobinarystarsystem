@@ -1,10 +1,14 @@
 
 # Spectroscopic Binary System
 
+[![PyPI version](https://badge.fury.io/py/spectroscopicbinarysystem.svg)](https://badge.fury.io/py/spectroscopicbinarysystem) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/spectroscopicbinarysystem)
+
 **Spectroscopic Binary System** is a package intended to contain functionality and some common tools needed for performing astrophysics on spectroscopic binary stars with Python. It allows, among other things, to automatically measure the radial velocity of SB1 type systems and to find their orbital solution with **BinaryStarSolver** (https://github.com/NickMilsonPhysics/BinaryStarSolver)
 
 
 ## Installation
+
+To install astropy with pip, run:
 
 mac/unix
 ```bash
@@ -14,6 +18,18 @@ mac/unix
 windows
 ```bash
   py -m pip install spectroscopicbinarysystem
+```
+
+If you want to make sure none of your existing dependencies get upgraded, you can also do:
+
+mac/unix
+```bash
+  pip install spectroscopicbinarysystem --no-deps
+```
+
+windows
+```bash
+  py -m pip install spectroscopicbinarysystem --no-deps
 ```
 
 ## Usage/Examples
