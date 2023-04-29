@@ -9,8 +9,6 @@
 ## Installation
 
 To install **spectroscopicbinarysystem** with pip, run:
-
-mac/unix
 ```bash
   # mac / unix
   pip install spectroscopicbinarysystem
@@ -20,8 +18,6 @@ mac/unix
 ```
 
 If you want to make sure none of your existing dependencies get upgraded, you can also do:
-
-mac/unix
 ```bash
   # mac / unix
   pip install spectroscopicbinarysystem --no-deps 
