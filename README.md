@@ -28,7 +28,7 @@ If you want to make sure none of your existing dependencies get upgraded, you ca
 
 ## Usage/Examples
 
-Download sample data (see **/examples/alphadra** directory)
+Download sample data (see **/examples/alphadra** directory) or from the **Staros** database (https://alphadra.staros-projects.org/)
 
 And run this code :
 
