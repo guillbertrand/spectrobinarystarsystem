@@ -17,7 +17,9 @@ sbs = SpectroscopicBinarySystem(
     debug=True)
 
 sbs.plotRadialVelocityCurve(
-    title="α Dra - HD123299 - Phased radial velocities", savefig=True)
+    title="α Dra - HD123299 - Phased radial velocities",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
+    savefig=True)
 
 # sbs.plotlyRadialVelocityCurve(
 #     title="α Dra - HD123299 - Phased radial velocities",

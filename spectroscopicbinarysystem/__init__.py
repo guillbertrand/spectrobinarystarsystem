@@ -155,7 +155,7 @@ class SBSpectrum1D(Spectrum1D):
         c = const.c.to('km/s')
         self._rv = (c * ((self._center_of_line -
                     self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr
-        
+
     def getCenterOfLine(self):
         """
         Return the center of the line computed for the spectrum using a fit (non corrected from heliocentric/barycentric velocity)
@@ -295,20 +295,33 @@ class SpectroscopicBinarySystem:
             plt.rcParams['font.size'] = '6'
             plt.rcParams['font.family'] = 'monospace'
             grid_size = math.ceil(len(self._sb_spectra)/6)
-            fig, axs = plt.subplots(6,grid_size, figsize=(13,7), sharex=True, sharey=True)
+            fig, axs = plt.subplots(6, grid_size, figsize=(
+                13, 7), sharex=True, sharey=True)
             for i, s in enumerate(self._sb_spectra):
                 ax = axs.flat[i]
                 extracted_profil, line_fitting = s.getDebugLineFitting()
-                ax.set_title(f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
+                ax.set_title(
+                    f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
                 ax.grid(True)
                 ax.tick_params(axis='both', which='major', labelsize=6)
                 ax.tick_params(axis='both', which='minor', labelsize=6)
-                ax.plot(extracted_profil.spectral_axis.to(u.AA), extracted_profil.flux, color="k")
-                ax.plot(extracted_profil.spectral_axis.to(u.AA), line_fitting, color="r")
-                ax.axvline(x=s.getCenterOfLine(), color='r', linestyle='-',lw=0.7)
+                ax.plot(extracted_profil.spectral_axis.to(
+                    u.AA), extracted_profil.flux, color="k")
+                ax.plot(extracted_profil.spectral_axis.to(
+                    u.AA), line_fitting, color="r")
+                ax.axvline(x=s.getCenterOfLine(),
+                           color='r', linestyle='-', lw=0.7)
             plt.tight_layout(pad=0.8, w_pad=2, h_pad=1)
             plt.savefig(f'{self._spectra_path}/sbs_debug_result.png', dpi=150)
             plt.show()
+
+    def getObservationCount(self):
+        """
+        Return the count of processed spectra
+        :return: count
+        :rtype: int
+        """
+        return len(self._sb_spectra)
 
     def __getPhase(self, jd0, period, jd):
         """
