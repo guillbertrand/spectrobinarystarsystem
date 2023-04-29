@@ -8,15 +8,14 @@
 
 ## Installation
 
-To install astropy with pip, run:
+To install **spectroscopicbinarysystem** with pip, run:
 
 mac/unix
 ```bash
+  # mac / unix
   pip install spectroscopicbinarysystem
-```
 
-windows
-```bash
+  # windows
   py -m pip install spectroscopicbinarysystem
 ```
 
@@ -24,11 +23,10 @@ If you want to make sure none of your existing dependencies get upgraded, you ca
 
 mac/unix
 ```bash
-  pip install spectroscopicbinarysystem --no-deps
-```
+  # mac / unix
+  pip install spectroscopicbinarysystem --no-deps 
 
-windows
-```bash
+  # windows
   py -m pip install spectroscopicbinarysystem --no-deps
 ```
 
