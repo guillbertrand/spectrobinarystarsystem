@@ -147,6 +147,9 @@ class SBSpectrum1D(Spectrum1D):
             kind=self._conf["RV_CORR_TYPE"], obstime=t, location=loc)
         self._rv_corr = vcorr.to(u.km / u.s)
 
+    def getRVCorrection(self):
+        return self._rv_corr
+
     def findRV(self):
         """
         Compute the radial velocity from a line position and a radial velocity correction
@@ -730,8 +733,8 @@ class SpectroscopicBinarySystem:
         for s in self._sb_spectra:
             ss = copy.copy(s)
             # apply heliocentric/barycentric correction
-            # ss.shift_spectrum_to(
-            #     radial_velocity=s.getRV()*u.km/u.s)
+            ss.shift_spectrum_to(
+                radial_velocity=s.getRVCorrection())
             fluxc_resample = LinearInterpolatedResampler()
             output_spectrum1D = fluxc_resample(ss, sc)
             phase = s.getPhase()
