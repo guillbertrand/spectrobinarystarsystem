@@ -760,5 +760,5 @@ class SpectroscopicBinarySystem:
         plt.yticks(np.arange(0, 1.01, 0.1))
         if savefig:
             plt.savefig(
-                f'{self._spectra_path}/sbs_2d_spectrum_result.png', dpi=dpi)
+                f'{self._spectra_path}/{self._object_name}_2d_spectrum_result.png', dpi=dpi)
         plt.show()
