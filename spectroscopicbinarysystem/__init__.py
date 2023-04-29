@@ -1,5 +1,6 @@
 import re
 import os
+import copy
 import math
 import warnings
 
@@ -727,8 +728,12 @@ class SpectroscopicBinarySystem:
 
         # resample each spectrum
         for s in self._sb_spectra:
+            ss = copy.copy(s)
+            # apply heliocentric/barycentric correction
+            ss.shift_spectrum_to(
+                radial_velocity=s.getRV()*u.km/u.s)
             fluxc_resample = LinearInterpolatedResampler()
-            output_spectrum1D = fluxc_resample(s, sc)
+            output_spectrum1D = fluxc_resample(ss, sc)
             phase = s.getPhase()
             indice = int(round(phase, 2) * len(y_phase))
             spec2d[:, indice] = output_spectrum1D.flux
@@ -751,7 +756,7 @@ class SpectroscopicBinarySystem:
         ax.set_title("%s\n%s" % (t, subtitle), fontsize=9,
                      fontweight="0", color='black')
 
-        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+        plt.tight_layout(pad=3, w_pad=0, h_pad=1)
         plt.yticks(np.arange(0, 1.01, 0.1))
         if savefig:
             plt.savefig(
