@@ -730,8 +730,8 @@ class SpectroscopicBinarySystem:
         for s in self._sb_spectra:
             ss = copy.copy(s)
             # apply heliocentric/barycentric correction
-            ss.shift_spectrum_to(
-                radial_velocity=s.getRV()*u.km/u.s)
+            # ss.shift_spectrum_to(
+            #     radial_velocity=s.getRV()*u.km/u.s)
             fluxc_resample = LinearInterpolatedResampler()
             output_spectrum1D = fluxc_resample(ss, sc)
             phase = s.getPhase()
