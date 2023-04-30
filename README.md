@@ -26,6 +26,30 @@ If you want to make sure none of your existing dependencies get upgraded, you ca
   py -m pip install spectroscopicbinarysystem --no-deps
 ```
 
+##Prerequisites
+
+Your spectra must be in fit(s) format with (at minimum) the following fields in the header :
+```
+01 | SIMPLE = T                       / File does conform to FITS standard
+02 | BITPIX = -32                     / Number of bits per data pixel
+03 | NAXIS = 1                        / Number of data axes
+04 | NAXIS1 = 1212                    / Length of data axis 1
+05 | CRVAL1 = 3780.17883300781        / Coordinate at reference pixel
+06 | CDELT1 = 3.267211914             / Coordinate increment
+09 | DATE-OBS= '2021-03-24T19:45:00'  / Date of observation start
+12 | BSS_INST= ' '                    / Instrument
+16 | OBSERVER= 'gbertrand'            / Observer name or alias
+17 | CUNIT1 = 'Angstrom'    / Wavelength unit
+18 | CTYPE1 = 'Wavelength'  / Axis type
+20 | CRPIX1 = 1             / Reference pixel
+21 | BSS_VHEL= 0            / [km/s] Heliocentric speed
+26 | JD-OBS = 0             / JD start observation
+29 | GEO_LONG= 0            / Obs. geographic longitude
+30 | GEO_LAT = 0            / Obs. geographic latitude
+31 | GEO_ELEV= 0            / Obs. geographic elevation
+```
+
+
 ## Usage/Examples
 
 Download sample data (see **/examples/alphadra** directory) or from the **STAROS** database (https://alphadra.staros-projects.org/)
