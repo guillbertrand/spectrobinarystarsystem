@@ -26,9 +26,10 @@ If you want to make sure none of your existing dependencies get upgraded, you ca
   py -m pip install spectroscopicbinarysystem --no-deps
 ```
 
-##Prerequisites
+## Prerequisites
 
-Your spectra must be in fit(s) format with (at minimum) the following fields in the header :
+Your spectra must be in fit(s) format with (at minimum) the following fields in the header.
+The geographical coordinates of the observer will allow to automatically correct the heliocentric/baricentric velocity.
 ```
 01 | SIMPLE = T                       / File does conform to FITS standard
 02 | BITPIX = -32                     / Number of bits per data pixel
