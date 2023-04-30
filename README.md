@@ -35,6 +35,7 @@ And run this code :
 ```python
 from spectroscopicbinarysystem import SpectroscopicBinarySystem
 
+# create SpectroscopicBinarySystem object
 sbs = SpectroscopicBinarySystem(
     object_name='hd123299',
     spectra_path='./examples/alphadra/',
