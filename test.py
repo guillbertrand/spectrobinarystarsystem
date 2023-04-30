@@ -18,15 +18,15 @@ sbs = SpectroscopicBinarySystem(
 
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
-    savefig=False)
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023\nhttps://alphadra.staros-projects.org/\n",
+    savefig=True)
 
 sbs.plotSpec2DFlux(
     title="α Dra - HD123299 - 2d dynamic spectrum",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True
 )
 
-# sbs.plotlyRadialVelocityCurve(
-#     title="α Dra - HD123299 - Phased radial velocities",
-#     group_by_instrument=False)
+sbs.plotlyRadialVelocityCurve(
+    title="α Dra - HD123299 - Phased radial velocities",
+    group_by_instrument=False)

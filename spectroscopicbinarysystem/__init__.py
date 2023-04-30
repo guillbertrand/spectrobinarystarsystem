@@ -379,6 +379,27 @@ class SpectroscopicBinarySystem:
 
         self._orbital_solution = (params, err, cov)
 
+        # If self._t0 compute phase delta between T0 of the model and the fixed value
+        if self._t0:
+            t0 = self._t0
+            phase1 = self.__getPhase(
+                t0, self._orbital_solution[0][5], self._orbital_solution[0][4]+2400000)
+            phase2 = 1.0
+            self._v0 = phase1 - phase2
+        # Else use t0 compute by the model
+        else:
+            self._t0 = self._orbital_solution[0][4] + 2400000
+            self._v0 = 0
+
+        period = self._orbital_solution[0][5]
+        for s in self._sb_spectra:
+            # compute phase of the sytem
+            jd = s.getJD()
+            phase = self.__getPhase(float(t0), period, jd)
+            s.setPhase(phase)
+            if self._debug:
+                print(f"{s.getBaseName()} phase : {phase}")
+
         print(
             f'{self._object_name} orbital solution with {len(self._sb_spectra)} spectra',
             f'- γ = {params[0]} ± {err[0]}',
@@ -416,7 +437,6 @@ class SpectroscopicBinarySystem:
         instruments = {}
         marker_index = {}
         color_number = 0
-        period = self._orbital_solution[0][5]
 
         cmap = plt.get_cmap('tab20')
         markers_style = ["o", "v", "^", "s", "D", "P", "X"]
@@ -430,13 +450,6 @@ class SpectroscopicBinarySystem:
         self._sb_spectra.sort(key=lambda x: x.getObserver())
 
         for s in self._sb_spectra:
-
-            # compute phase of the sytem
-            jd = s.getJD()
-            phase = self.__getPhase(float(t0), period, jd)
-            s.setPhase(phase)
-            if self._debug:
-                print(f"{s.getBaseName()} phase : {phase}")
 
             # get the observer
             obs = s.getObserver()
@@ -463,7 +476,7 @@ class SpectroscopicBinarySystem:
             axs[1].errorbar(s.getPhase(), s.getRV() - self._model_y[xindex],
                             yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
-    def plotRadialVelocityCurve(self, title, subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
+    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
         if not self._orbital_solution:
             self.__solveSystem()
 
@@ -482,32 +495,20 @@ class SpectroscopicBinarySystem:
         axs[1].grid(color='grey', alpha=0.2, linestyle='-',
                     linewidth=0.5, axis='both', which='both')
 
-        # If self._t0 compute phase delta between T0 of the model and the fixed value
-        if self._t0:
-            t0 = self._t0
-            phase1 = self.__getPhase(
-                t0, self._orbital_solution[0][5], self._orbital_solution[0][4]+2400000)
-            phase2 = 1.0
-            v0 = phase1 - phase2
-        # Else use t0 compute by the model
-        else:
-            t0 = self._orbital_solution[0][4] + 2400000
-            v0 = 0
-
         # plot orbital solution
         self._model_x = np.arange(0, 1.011, 0.001)
         self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(
-            x, v0, self._orbital_solution[0][1], self._orbital_solution[0][3], self._orbital_solution[0][2], self._orbital_solution[0][0]), self._model_x))
+            x, self._v0, self._orbital_solution[0][1], self._orbital_solution[0][3], self._orbital_solution[0][2], self._orbital_solution[0][0]), self._model_x))
         axs[0].plot(self._model_x, self._model_y, 'k',
                     alpha=0.7, lw=0.7, label='Orbital solution')
 
         # plot dots
-        self.__plotRadialVelocityDots(axs, t0)
+        self.__plotRadialVelocityDots(axs, self._t0)
 
         split_oname = title.split(' ')
         t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
-        subtitle = f'{subtitle}\nT0={t0} P={p}' if subtitle else f'T0={t0} P={p}'
+        subtitle = f'{subtitle}\nT0={self._t0} P={p}' if subtitle else f'T0={self._t0} P={p}'
         axs[0].set_title("%s\n%s" % (t, subtitle), fontsize=9,
                          fontweight="0", color='black')
 
@@ -522,10 +523,11 @@ class SpectroscopicBinarySystem:
         plt.tight_layout(pad=1, w_pad=0, h_pad=1)
         plt.xticks(np.arange(0, 1.01, 0.1))
         if savefig:
-            plt.savefig(f'{self._spectra_path}/sbs_phased_result.png', dpi=dpi)
+            plt.savefig(
+                f'{self._spectra_path}/{self._object_name}_phased_result.png', dpi=dpi)
         plt.show()
 
-    def plotlyRadialVelocityCurve(self, title, font_family='monospace', font_size=9, show=True, group_by_instrument=True):
+    def plotlyRadialVelocityCurve(self, title="", font_family='monospace', font_size=9, show=True, group_by_instrument=True):
         """
         Plot the radial velocity curve using plotly
         # Todo : update parameters and link to yaml config file
@@ -541,23 +543,10 @@ class SpectroscopicBinarySystem:
 
         fig = go.Figure()
 
-        # If self._t0 compute phase delta between T0 of the model and the fixed value
-        if (self._t0):
-
-            t0 = self._t0
-            phase1 = self.__getPhase(
-                t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
-            phase2 = 1.0
-            v0 = phase1 - phase2
-        # Else use t0 compute by the model
-        else:
-            t0 = self._orbital_solution[0][4] + 2400000
-            v0 = 0
-
         # plot orbital solution
         self._model_x = np.arange(0, 1.011, 0.001)
 
-        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(x, v0, self._orbital_solution[0][1],
+        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(x, self._v0, self._orbital_solution[0][1],
                                                                              self._orbital_solution[0][3],
                                                                              self._orbital_solution[0][2],
                                                                              self._orbital_solution[0][0]),
@@ -584,7 +573,7 @@ class SpectroscopicBinarySystem:
         for s in self._sb_spectra:
             # compute phase of the sytem
             jd = s.getJD()
-            phase = self.__getPhase(float(t0), period, jd)
+            phase = self.__getPhase(float(self._t0), period, jd)
             s.setPhase(phase)
 
             # get the observer
@@ -645,7 +634,7 @@ class SpectroscopicBinarySystem:
                                               font_size=10))
 
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
-        title += f' T0={t0} P={p}'
+        title += f' T0={self._t0} P={p}'
 
         fig.update_layout(
             title=title,
@@ -682,7 +671,16 @@ class SpectroscopicBinarySystem:
 
         return fig
 
-    def plotSpec2DFlux(self, title, subtitle="", savefig=False, dpi=150, font_family='monospace', font_size=9):
+    def addFootNote(self, ax, footnote):
+        # Add a footnote below and to the right side of the chart
+        ax.annotate(footnote,
+                    xy=(1.0, -0.2),
+                    xycoords='axes fraction',
+                    ha='right',
+                    va="center",
+                    fontsize=8)
+
+    def plotSpec2DFlux(self, title="", subtitle="", savefig=False, dpi=150, font_family='monospace', font_size=9):
         """
         Plot the 2d dynamic spectra
         :param title:
@@ -696,26 +694,6 @@ class SpectroscopicBinarySystem:
 
         if not self._orbital_solution:
             self.__solveSystem()
-
-        period = self._orbital_solution[0][5]
-        # If self._t0 compute phase delta between T0 of the model and the fixed value
-        if (self._t0):
-
-            t0 = self._t0
-            phase1 = self.__getPhase(
-                t0, self._orbital_solution[0][5], self._orbital_solution[0][4] + 2400000)
-            phase2 = 1.0
-            v0 = phase1 - phase2
-        # Else use t0 compute by the model
-        else:
-            t0 = self._orbital_solution[0][4] + 2400000
-            v0 = 0
-
-        for s in self._sb_spectra:
-            # compute phase of the sytem
-            jd = s.getJD()
-            phase = self.__getPhase(float(t0), period, jd)
-            s.setPhase(phase)
 
         # sort sb spectra by phase
         self._sb_spectra.sort(key=lambda x: x.getPhase())
@@ -755,7 +733,7 @@ class SpectroscopicBinarySystem:
         split_oname = title.split(' ')
         t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
         p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
-        subtitle = f'{subtitle}\nT0={t0} P={p}' if subtitle else f'T0={t0} P={p}'
+        subtitle = f'{subtitle}\nT0={self._t0} P={p}' if subtitle else f'T0={self._t0} P={p}'
         ax.set_title("%s\n%s" % (t, subtitle), fontsize=9,
                      fontweight="0", color='black')
 
