@@ -743,3 +743,5 @@ class SpectroscopicBinarySystem:
             plt.savefig(
                 f'{self._spectra_path}/{self._object_name}_2d_spectrum_result.png', dpi=dpi)
         plt.show()
+
+        return spec2d
