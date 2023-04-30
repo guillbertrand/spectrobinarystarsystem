@@ -22,7 +22,7 @@ sbs.plotRadialVelocityCurve(
     savefig=True)
 
 sbs.plotSpec2DFlux(
-    title="α Dra - HD123299 - 2d dynamic spectrum",
+    title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
     subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True
 )
