@@ -395,7 +395,7 @@ class SpectroscopicBinarySystem:
         for s in self._sb_spectra:
             # compute phase of the sytem
             jd = s.getJD()
-            phase = self.__getPhase(float(t0), period, jd)
+            phase = self.__getPhase(float(self._t0), period, jd)
             s.setPhase(phase)
             if self._debug:
                 print(f"{s.getBaseName()} phase : {phase}")
