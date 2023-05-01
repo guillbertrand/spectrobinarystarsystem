@@ -716,7 +716,8 @@ class SpectroscopicBinarySystem:
             fluxc_resample = LinearInterpolatedResampler()
             output_spectrum1D = fluxc_resample(ss, sc)
             phase = s.getPhase()
-            indice = int(round(phase, 2) * len(y_phase))
+            indice = int(round(phase, 2) * len(y_phase))-1
+
             spec2d[:, indice] = output_spectrum1D.flux
 
         # prepare imshow
