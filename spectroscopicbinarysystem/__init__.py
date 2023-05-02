@@ -368,14 +368,19 @@ class SpectroscopicBinarySystem:
                 f.write(output + '\n')
 
         # [γ, K, ω, e, T0, P, a, f(M)]
-        params, err, cov = StarSolve(
-            data_file=f"{self._spectra_path}/sbs_results.txt",
-            star="primary",
-            Period=self._period,
-            Pguess=self._period_guess,
-            covariance=True,
-            graphs=False,
-        )
+        try:
+            params, err, cov = StarSolve(
+                data_file=f"{self._spectra_path}/sbs_results.txt",
+                star="primary",
+                Period=self._period,
+                Pguess=self._period_guess,
+                covariance=True,
+                graphs=False,
+            )
+        except:
+            print(
+                'An exception occurred : the calculation of the orbital solution failed')
+            exit()
 
         self._orbital_solution = (params, err, cov)
 
@@ -413,11 +418,7 @@ class SpectroscopicBinarySystem:
             sep='\n')
 
     def getOrbitalSolution(self):
-        try:
-            self.__solveSystem()
-        except:
-            print(
-                'An exception occurred : the calculation of the orbital solution failed')
+        self.__solveSystem()
         return self._orbital_solution
 
     def __findNearest(self, array, value):
