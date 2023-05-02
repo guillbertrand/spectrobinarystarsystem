@@ -413,7 +413,11 @@ class SpectroscopicBinarySystem:
             sep='\n')
 
     def getOrbitalSolution(self):
-        self.__solveSystem()
+        try:
+            self.__solveSystem()
+        except:
+            print(
+                'An exception occurred : the calculation of the orbital solution failed')
         return self._orbital_solution
 
     def __findNearest(self, array, value):
@@ -716,7 +720,7 @@ class SpectroscopicBinarySystem:
             fluxc_resample = LinearInterpolatedResampler()
             output_spectrum1D = fluxc_resample(ss, sc)
             phase = s.getPhase()
-            indice = int(round(phase, 2) * len(y_phase))-1
+            indice = int(round(phase, 2) * (len(y_phase))-1)
 
             spec2d[:, indice] = output_spectrum1D.flux
 
