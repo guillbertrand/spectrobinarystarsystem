@@ -431,7 +431,7 @@ class SpectroscopicBinarySystem:
         array = np.asarray(array)
         return (np.abs(array - value)).argmin()
 
-    def __plotRadialVelocityDots(self, axs, t0):
+    def __plotRadialVelocityDots(self, axs, t0, group_by_instruments=False):
         """
         Plot the radial velocity dots from the data
         :param axs: axes to plot
@@ -461,27 +461,34 @@ class SpectroscopicBinarySystem:
             if (obs not in observers.keys()):
                 observers[obs] = colors[color_number]
                 color_number += 1
+                if not group_by_instruments:
+                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                                    fmt='o', ecolor='k', label=obs, capsize=0, color=observers[obs], lw=.7, markersize=5)
+            elif not group_by_instruments:
+                axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                                fmt='o', ecolor='k', capsize=0, color=observers[obs], lw=.7, markersize=5)
             color = observers[obs]
 
             # get the instrument
-
-            label = f"{obs} - {s.getInstrument()[:30]}…"
-            if label not in instruments.keys():
-                if obs not in marker_index:
-                    marker_index[obs] = 0
-                instruments[label] = markers_style[marker_index[obs]]
-                marker_index[obs] += 1
-                axs[0].errorbar(s.getPhase(), s.getRV(
-                ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
-            else:
-                axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
+            if (group_by_instruments):
+                label = f"{obs} - {s.getInstrument()[:30]}…"
+                if label not in instruments.keys():
+                    if obs not in marker_index:
+                        marker_index[obs] = 0
+                    instruments[label] = markers_style[marker_index[obs]]
+                    marker_index[obs] += 1
+                    axs[0].errorbar(s.getPhase(), s.getRV(
+                    ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
+                else:
+                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                                    fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
             xindex = self.__findNearest(self._model_x, s.getPhase())
+            fmt = instruments[label] if group_by_instruments else 'o'
             axs[1].errorbar(s.getPhase(), s.getRV() - self._model_y[xindex],
-                            yerr=0, fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
+                            yerr=0, fmt=fmt, ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
-    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=0.5, savefig=False, dpi=150, font_family='monospace', font_size=9):
+    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
         if not self._orbital_solution:
             self.__solveSystem()
 
@@ -508,7 +515,7 @@ class SpectroscopicBinarySystem:
                     alpha=0.7, lw=0.7, label='Orbital solution')
 
         # plot dots
-        self.__plotRadialVelocityDots(axs, self._t0)
+        self.__plotRadialVelocityDots(axs, self._t0, group_by_instruments)
 
         split_oname = title.split(' ')
         t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
@@ -517,10 +524,13 @@ class SpectroscopicBinarySystem:
         axs[0].set_title("%s\n%s" % (t, subtitle), fontsize=9,
                          fontweight="0", color='black')
 
-        axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
+        if rv_y_multiple:
+            axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
         axs[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
-        axs[1].yaxis.set_major_locator(MultipleLocator(residual_y_multiple))
+        if residual_y_multiple:
+            axs[1].yaxis.set_major_locator(
+                MultipleLocator(residual_y_multiple))
         axs[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
 
         axs[0].legend(bbox_to_anchor=(1, 1), loc="upper left",
