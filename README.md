@@ -1,7 +1,7 @@
 
 # Spectroscopic Binary System
 
-[![PyPI version](https://badge.fury.io/py/spectroscopicbinarysystem.svg?1.1.43)](https://badge.fury.io/py/spectroscopicbinarysystem)
+[![PyPI version](https://badge.fury.io/py/spectroscopicbinarysystem.svg?1.1.44)](https://badge.fury.io/py/spectroscopicbinarysystem)
 
 **Spectroscopic Binary System** is a package intended to contain functionality and some common tools needed for performing astrophysics on spectroscopic binary stars with Python. It allows, among other things, to automatically measure the radial velocity of SB1 type systems and to find their orbital solution with **BinaryStarSolver** (https://github.com/NickMilsonPhysics/BinaryStarSolver)
 
@@ -60,7 +60,6 @@ And run this code :
 ```python
 from spectroscopicbinarysystem import SpectroscopicBinarySystem
 
-# create SpectroscopicBinarySystem object
 sbs = SpectroscopicBinarySystem(
     object_name='hd123299',
     spectra_path='./examples/alphadra/',
@@ -70,28 +69,30 @@ sbs = SpectroscopicBinarySystem(
         "LAMBDA_REF": 6562.82,
         "LINE_FIT_MODEL": "voigt",
         "LINE_FIT_WINDOW_WIDTH": 10,
-        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
-        "LINE_FIT_FWHM": .5,
+        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1,
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
-    debug=True)
+    debug=False)
 
 # plot result with matplotlib and save the results
-sbs.plotRadialVelocityCurve(title="α Dra - HD123299 - Phased radial velocities", 
-                            subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
-                            savefig=True)
- 
-# display result with plotly
-sbs.plotlyRadialVelocityCurve(
-    title="α Dra - HD123299 - Phased radial velocities")
+sbs.plotRadialVelocityCurve(
+    title="α Dra - HD123299 - Phased radial velocities",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
+    savefig=True)
 
 # plot 2d dynamic spectrum
 sbs.plotSpec2DFlux(
-    title="α Dra - HD123299 - 2d dynamic spectrum",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023",
-    savefig=False
+    title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
+    savefig=True
 )
+
+# display result with plotl
+sbs.plotlyRadialVelocityCurve(
+    title="α Dra - HD123299 - Phased radial velocities",
+    group_by_instrument=False)
+
 ```
 
 ![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/hd123299_phased_result.png)

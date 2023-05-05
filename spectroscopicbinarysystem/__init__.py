@@ -186,31 +186,28 @@ class SBSpectrum1D(Spectrum1D):
         ipeak = self.flux.argmin()
         xpeak = self.spectral_axis[ipeak].to(u.AA)
 
-        invert_s = extract_region(Spectrum1D(flux=self.flux * -1, wcs=self.wcs),
-                                  SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA)))
+        spec1d_line = extract_region(Spectrum1D(flux=self.flux, wcs=self.wcs),
+                                     SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA)))
 
-        s_fit = fit_generic_continuum(invert_s,
-                                      exclude_regions=[SpectralRegion(xpeak - (w2 * u.AA), xpeak + (w2 * u.AA))])
-        invert_s = invert_s / s_fit(invert_s.spectral_axis)
-        invert_s = invert_s - 1
+        s_fit = fit_generic_continuum(spec1d_line, exclude_regions=[
+                                      SpectralRegion(xpeak - (w2 * u.AA), xpeak + (w2 * u.AA))])
+        spec1d_line = spec1d_line / s_fit(spec1d_line.spectral_axis)
+        spec1d_line = spec1d_line - 1
 
         match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
                 g_init = models.Gaussian1D(
-                    mean=xpeak, amplitude=invert_s.flux.argmax())
+                    mean=xpeak, amplitude=spec1d_line.flux.argmin())
             case 'voigt':
                 g_init = models.Voigt1D(
-                    x_0=xpeak, amplitude_L=2 / (np.pi * fwhm))
+                    x_0=xpeak, amplitude_L=spec1d_line.flux.argmin())
             case 'lorentz':
                 g_init = models.Lorentz1D(x_0=xpeak, fwhm=fwhm)
-            case _:
-                g_init = models.Gaussian1D(
-                    mean=xpeak, amplitude=invert_s.flux.argmax())
         #
 
-        g_fit = fit_lines(invert_s, g_init, window=SpectralRegion(
+        g_fit = fit_lines(spec1d_line, g_init, window=SpectralRegion(
             xpeak - (w2 * u.AA), xpeak + (w2 * u.AA)))
-        y_fit = g_fit(invert_s.spectral_axis)
+        y_fit = g_fit(spec1d_line.spectral_axis)
 
         match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
@@ -218,7 +215,7 @@ class SBSpectrum1D(Spectrum1D):
             case _:
                 center = g_fit.x_0
 
-        self._debug_line_fitting = (invert_s, y_fit)
+        self._debug_line_fitting = (spec1d_line, y_fit)
         self._center_of_line = center.value
 
     def __str__(self):

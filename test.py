@@ -9,24 +9,26 @@ sbs = SpectroscopicBinarySystem(
         "LAMBDA_REF": 6562.82,
         "LINE_FIT_MODEL": "voigt",
         "LINE_FIT_WINDOW_WIDTH": 10,
-        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
-        "LINE_FIT_FWHM": .5,
+        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1,
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
     debug=False)
 
+# plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023\nhttps://alphadra.staros-projects.org/\n",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True)
 
+# plot 2d dynamic spectrum
 sbs.plotSpec2DFlux(
     title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to april 2023\nhttps://alphadra.staros-projects.org/\n",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True
 )
 
+# display result with plotl
 sbs.plotlyRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
     group_by_instrument=False)
