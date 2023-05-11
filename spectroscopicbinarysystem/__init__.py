@@ -22,8 +22,9 @@ from astroquery.simbad import Simbad
 
 # specutils
 from specutils import Spectrum1D, SpectralRegion
-from specutils.manipulation import extract_region, LinearInterpolatedResampler
+from specutils.manipulation import extract_region, LinearInterpolatedResampler, gaussian_smooth
 from specutils.fitting import fit_lines, fit_generic_continuum
+from specutils.analysis import centroid
 
 # matplotlib
 import matplotlib.pyplot as plt
@@ -51,6 +52,7 @@ class SBSpectrum1D(Spectrum1D):
         self._basename = os.path.basename(filename)
         self._skycoord = skycoord
         self._conf = conf
+        self._phase = None
 
         spectrum_file = fits.open(filename)
 
@@ -178,22 +180,28 @@ class SBSpectrum1D(Spectrum1D):
         w1 = float(self._conf['LINE_FIT_WINDOW_WIDTH']) / 2
         w2 = float(self._conf['LINE_FIT_CONT_NORM_EXCLUDE_WIDTH']) / 2
         fwhm = float(self._conf['LINE_FIT_FWHM'])
+        gauss_smooth_std = float(self._conf['LINE_FIT_GAUSS_SMOOTH_STD'])
 
-        # > Hack to replace zero values of the spectra.
-        # Sometimes first value for the intensity is equal to 0.00 and prevents finding the true minima.
-        # Ex : sample/alphadra/_alphadra_20230406_856.fits
-        self.flux[self.flux == 0] = 1 * u.Jy
-        ipeak = self.flux.argmin()
-        xpeak = self.spectral_axis[ipeak].to(u.AA)
+        # Smooth the spectrum to make a first approximation of the center of the main line in absorption.
+        # Assume that the line to be measured is the broadest and deepest in the spectrum
+        spec1_gsmooth = gaussian_smooth(Spectrum1D(
+            flux=self.flux, wcs=self.wcs), stddev=gauss_smooth_std)
 
-        spec1d_line = extract_region(Spectrum1D(flux=self.flux, wcs=self.wcs),
-                                     SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA)))
+        ipeak = spec1_gsmooth.flux[50:-50].argmin()
+        xpeak = spec1_gsmooth.spectral_axis[50:-50][ipeak].to(u.AA)
 
-        s_fit = fit_generic_continuum(spec1d_line, exclude_regions=[
-                                      SpectralRegion(xpeak - (w2 * u.AA), xpeak + (w2 * u.AA))])
+        sr_w1 = SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA))
+        sr_w2 = SpectralRegion(xpeak - (w2 * u.AA), xpeak + (w2 * u.AA))
+
+        spec1d_line = extract_region(Spectrum1D(
+            flux=self.flux, wcs=self.wcs), sr_w1)
+
+        # continuum normalization of the extracted spectral region
+        s_fit = fit_generic_continuum(spec1d_line, exclude_regions=[sr_w2])
         spec1d_line = spec1d_line / s_fit(spec1d_line.spectral_axis)
         spec1d_line = spec1d_line - 1
 
+        # line fitting
         match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
                 g_init = models.Gaussian1D(
@@ -203,10 +211,8 @@ class SBSpectrum1D(Spectrum1D):
                     x_0=xpeak, amplitude_L=spec1d_line.flux.argmin())
             case 'lorentz':
                 g_init = models.Lorentz1D(x_0=xpeak, fwhm=fwhm)
-        #
 
-        g_fit = fit_lines(spec1d_line, g_init, window=SpectralRegion(
-            xpeak - (w2 * u.AA), xpeak + (w2 * u.AA)))
+        g_fit = fit_lines(spec1d_line, g_init, window=sr_w2)
         y_fit = g_fit(spec1d_line.spectral_axis)
 
         match self._conf['LINE_FIT_MODEL']:
@@ -215,7 +221,8 @@ class SBSpectrum1D(Spectrum1D):
             case _:
                 center = g_fit.x_0
 
-        self._debug_line_fitting = (spec1d_line, y_fit)
+        self._debug_line_fitting = (spec1d_line, y_fit, extract_region(Spectrum1D(
+            flux=spec1_gsmooth.flux, wcs=self.wcs), sr_w1))
         self._center_of_line = center.value
 
     def __str__(self):
@@ -242,13 +249,14 @@ class SpectroscopicBinarySystem:
     :param debug: Allow to activate log and some additional plots for debug purpose
     """
 
-    def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, debug=False):
+    def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, verbose=False, debug=False):
 
         self._conf = {"LAMBDA_REF": 6562.82,
                       "LINE_FIT_MODEL": "voigt",
                       "LINE_FIT_WINDOW_WIDTH": 10,
                       "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
                       "LINE_FIT_FWHM": .5,
+                      "LINE_FIT_GAUSS_SMOOTH_STD": 10,
                       "RV_CORR_TYPE": "barycentric",
                       "SB_TYPE": 1}
 
@@ -262,6 +270,8 @@ class SpectroscopicBinarySystem:
         self._period = period
         self._period_guess = period_guess
         self._debug = debug
+        self._verbose = verbose
+        self._residuals = []
 
         # load user configuration or defaults
         if conf:
@@ -289,32 +299,40 @@ class SpectroscopicBinarySystem:
                     sbSpec1D = SBSpectrum1D(
                         spectrum_filename, self._skycoord, self._conf)
                     self._sb_spectra.append(sbSpec1D)
-                    if self._debug:
+                    if self._verbose:
                         print(sbSpec1D)
-        if self._debug:
+
+        if self._verbose:
             print(f'{len(self._sb_spectra)} processed spectra')
+        if self._debug:
             plt.rcParams['font.size'] = '6'
             plt.rcParams['font.family'] = 'monospace'
-            grid_size = math.ceil(len(self._sb_spectra)/6)
-            fig, axs = plt.subplots(6, grid_size, figsize=(
-                13, 7), sharex=True, sharey=True)
-            for i, s in enumerate(self._sb_spectra):
-                ax = axs.flat[i]
-                extracted_profil, line_fitting = s.getDebugLineFitting()
-                ax.set_title(
-                    f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
-                ax.grid(True)
-                ax.tick_params(axis='both', which='major', labelsize=6)
-                ax.tick_params(axis='both', which='minor', labelsize=6)
-                ax.plot(extracted_profil.spectral_axis.to(
-                    u.AA), extracted_profil.flux, color="k")
-                ax.plot(extracted_profil.spectral_axis.to(
-                    u.AA), line_fitting, color="r")
-                ax.axvline(x=s.getCenterOfLine(),
-                           color='r', linestyle='-', lw=0.7)
-            plt.tight_layout(pad=0.8, w_pad=2, h_pad=1)
-            plt.savefig(f'{self._spectra_path}/sbs_debug_result.png', dpi=150)
-            plt.show()
+
+            paginate_sb_spectra = [self._sb_spectra[i:i+16]
+                                   for i in range(0, len(self._sb_spectra), 16)]
+            for page, spectra in enumerate(paginate_sb_spectra):
+                fig, axs = plt.subplots(4, 4, figsize=(
+                    10, 7), sharex=True, sharey=True)
+                for i, s in enumerate(spectra):
+                    ax = axs.flat[i]
+                    extracted_profil, line_fitting, gauss_smooth = s.getDebugLineFitting()
+                    ax.set_title(
+                        f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
+                    ax.grid(True)
+                    ax.tick_params(axis='both', which='major', labelsize=6)
+                    ax.tick_params(axis='both', which='minor', labelsize=6)
+                    ax.plot(extracted_profil.spectral_axis.to(
+                        u.AA), extracted_profil.flux, color="k")
+                    ax.plot(gauss_smooth.spectral_axis.to(
+                        u.AA), gauss_smooth.flux-1*u.Jy, "b--")
+                    ax.plot(extracted_profil.spectral_axis.to(
+                        u.AA), line_fitting, color="r")
+                    ax.axvline(x=s.getCenterOfLine(),
+                               color='r', linestyle='-', lw=0.7)
+                plt.tight_layout(pad=0.8, w_pad=2, h_pad=1)
+                plt.savefig(
+                    f'{self._spectra_path}/{self._object_name}_debug_result_page_{page}.png', dpi=300)
+                plt.close(fig)
 
     def getObservationCount(self):
         """
@@ -399,7 +417,7 @@ class SpectroscopicBinarySystem:
             jd = s.getJD()
             phase = self.__getPhase(float(self._t0), period, jd)
             s.setPhase(phase)
-            if self._debug:
+            if self._verbose:
                 print(f"{s.getBaseName()} phase : {phase}")
 
         print(
@@ -481,9 +499,13 @@ class SpectroscopicBinarySystem:
                                     fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
             xindex = self.__findNearest(self._model_x, s.getPhase())
+            delta = s.getRV() - self._model_y[xindex]
+            self._residuals.append(delta)
             fmt = instruments[label] if group_by_instruments else 'o'
-            axs[1].errorbar(s.getPhase(), s.getRV() - self._model_y[xindex],
+            axs[1].errorbar(s.getPhase(), delta,
                             yerr=0, fmt=fmt, ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
+
+        print(f'- Residuals mean STD : {np.std(self._residuals)} km/s')
 
     def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
         if not self._orbital_solution:

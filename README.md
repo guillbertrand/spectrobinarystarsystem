@@ -73,6 +73,7 @@ sbs = SpectroscopicBinarySystem(
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
+    verbose=True
     debug=False)
 
 # plot result with matplotlib and save the results
@@ -99,5 +100,4 @@ sbs.plotlyRadialVelocityCurve(
 
 ![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/hd123299_2d_spectrum_result.png)
 
-![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/sbs_debug_result.png)
-
+![results](https://github.com/guillbertrand/spectrobinarystarsystem/blob/master/examples/alphadra/hd123299_debug_result_page_4.png)
