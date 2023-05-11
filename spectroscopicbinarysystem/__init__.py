@@ -199,7 +199,7 @@ class SBSpectrum1D(Spectrum1D):
         # continuum normalization of the extracted spectral region
         s_fit = fit_generic_continuum(spec1d_line, exclude_regions=[sr_w2])
         spec1d_line = spec1d_line / s_fit(spec1d_line.spectral_axis)
-        spec1d_line = spec1d_line - 1
+        spec1d_line -= 1
 
         # line fitting
         match self._conf['LINE_FIT_MODEL']:
