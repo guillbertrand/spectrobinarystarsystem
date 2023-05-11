@@ -505,7 +505,7 @@ class SpectroscopicBinarySystem:
             axs[1].errorbar(s.getPhase(), delta,
                             yerr=0, fmt=fmt, ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
-        print(f'- Residuals mean STD : {np.std(self._residuals)} km/s')
+        print(f'- Residuals STD : {np.std(self._residuals)} km/s')
 
     def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
         if not self._orbital_solution:
