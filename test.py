@@ -11,6 +11,7 @@ sbs = SpectroscopicBinarySystem(
         "LINE_FIT_WINDOW_WIDTH": 10,
         "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1,
         "RV_CORR_TYPE": "barycentric",
+        "LINE_FWHM": 5.8,
         "SB_TYPE": 1
     },
     debug=False)

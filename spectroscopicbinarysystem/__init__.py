@@ -106,10 +106,22 @@ class SBSpectrum1D(Spectrum1D):
         :return: radial velocity
         :rtype: float
         """
-        error = float(self._header['CRDER1']
-                      ) if 'CRDER1' in self._header else 0
         c = const.c.to('km/s')
-        return abs(c * (error / self._conf["LAMBDA_REF"])).value
+        calibration_error = float(
+            self._header['CRDER1']) if 'CRDER1' in self._header else 0
+        calibration_error = abs(
+            c * (calibration_error / self._conf["LAMBDA_REF"]))
+
+        center_error = 0
+        if 'LINE_FWHM' in self._conf:
+            fwhm = self._conf['LINE_FWHM']
+            cdelt1 = self._header['CDELT1']
+            fwhm_rv = c * fwhm / self._center_of_line
+            center_error = .55 * \
+                (fwhm_rv/(.68 * self._snr *
+                 np.sqrt(fwhm/cdelt1)))
+
+        return calibration_error.value + center_error.value
 
     def getSNR(self):
         return self._snr
@@ -176,7 +188,7 @@ class SBSpectrum1D(Spectrum1D):
         """
         c = const.c.to('km/s')
         self._rv = (c * ((self._center_of_line -
-                    self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr
+                          self._conf["LAMBDA_REF"]) / self._conf["LAMBDA_REF"])) + self._rv_corr
 
     def getCenterOfLine(self):
         """
@@ -188,7 +200,7 @@ class SBSpectrum1D(Spectrum1D):
     def getDebugLineFitting(self):
         return self._debug_line_fitting
 
-    def findSNR(self, lamb1=6610, lamb2=6625):
+    def findSNR(self, lamb1=6600, lamb2=6610):
         # nombre de points dans le spectre d'entrée
         nbx = self._header['NAXIS1']
 
@@ -377,8 +389,10 @@ class SpectroscopicBinarySystem:
                     ax.set_title(
                         f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
                     ax.grid(True)
-                    ax.tick_params(axis='both', which='major', labelsize=6)
-                    ax.tick_params(axis='both', which='minor', labelsize=6)
+                    ax.tick_params(
+                        axis='both', which='major', labelsize=6)
+                    ax.tick_params(
+                        axis='both', which='minor', labelsize=6)
                     ax.plot(extracted_profil.spectral_axis.to(
                         u.AA), extracted_profil.flux, color="k")
                     ax.plot(gauss_smooth.spectral_axis.to(
@@ -577,7 +591,7 @@ class SpectroscopicBinarySystem:
         plt.rcParams['font.size'] = font_size
         plt.rcParams['font.family'] = font_family
         fig, axs = plt.subplots(2, 1, figsize=(11, 7), gridspec_kw={
-                                'height_ratios': [4, 1]}, sharex=True)
+            'height_ratios': [4, 1]}, sharex=True)
         axs[1].set_xlabel('Phase', fontdict=None,
                           labelpad=None, fontname='monospace', size=8)
         axs[0].set_ylabel(
