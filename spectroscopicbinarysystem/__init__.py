@@ -53,6 +53,7 @@ class SBSpectrum1D(Spectrum1D):
         self._skycoord = skycoord
         self._conf = conf
         self._snr = 0.0
+        self._line_fit_fwhm = 0.0
         self._phase = None
 
         spectrum_file = fits.open(filename)
@@ -113,13 +114,13 @@ class SBSpectrum1D(Spectrum1D):
             c * (calibration_error / self._conf["LAMBDA_REF"]))
 
         center_error = 0
-        if 'LINE_FWHM' in self._conf:
-            fwhm = self._conf['LINE_FWHM']
-            cdelt1 = self._header['CDELT1']
-            fwhm_rv = c * fwhm / self._center_of_line
-            center_error = .55 * \
-                (fwhm_rv/(.68 * self._snr *
-                 np.sqrt(fwhm/cdelt1)))
+
+        fwhm = self._line_fit_fwhm
+        cdelt1 = self._header['CDELT1']
+        fwhm_rv = c * fwhm / self._center_of_line
+        center_error = .55 * \
+            (fwhm_rv/(.68 * self._snr *
+                      np.sqrt(fwhm/cdelt1)))
 
         return calibration_error.value + center_error.value
 
@@ -288,12 +289,18 @@ class SBSpectrum1D(Spectrum1D):
         match self._conf['LINE_FIT_MODEL']:
             case 'gaussian':
                 center = g_fit.mean
+                fwhm = g_fit.fwhm
+            case 'lorentz':
+                center = g_fit.x_0
+                fwhm = g_fit.fwhm
             case _:
                 center = g_fit.x_0
+                fwhm = g_fit.fwhm_L
 
         self._debug_line_fitting = (spec1d_line, y_fit, extract_region(Spectrum1D(
             flux=spec1_gsmooth.flux, wcs=self.wcs), sr_w1))
         self._center_of_line = center.value
+        self._line_fit_fwhm = fwhm.value
 
     def __str__(self):
         return f"Spectrum : {self._basename}\n- obs: {self._observer}\n- jd: {self._jd}\n- snr: {self._snr}\n- center: {self._center_of_line} A\n- {self._conf['RV_CORR_TYPE']}: {self._rv_corr}\n- rv: {self._rv}\n- error: {self.getError()}\n"
