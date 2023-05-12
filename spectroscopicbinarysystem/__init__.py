@@ -14,7 +14,7 @@ import astropy.units as u
 import astropy.wcs as fitswcs
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, SpectralCoord
-from astropy.modeling import models
+from astropy.modeling import models, fitting
 from astropy import constants as const
 
 # astroquery
@@ -52,6 +52,7 @@ class SBSpectrum1D(Spectrum1D):
         self._basename = os.path.basename(filename)
         self._skycoord = skycoord
         self._conf = conf
+        self._snr = 0.0
         self._phase = None
 
         spectrum_file = fits.open(filename)
@@ -71,6 +72,7 @@ class SBSpectrum1D(Spectrum1D):
             super().__init__(flux=flux, wcs=wcs_data)
 
             # analyse spectrum
+            self.findSNR()
             self.findCenterOfLine()
             self.findRVCorrection()
             self.findRV()
@@ -97,6 +99,20 @@ class SBSpectrum1D(Spectrum1D):
         :rtype: float
         """
         return self._rv.value
+
+    def getError(self):
+        """
+        Return the random error in km/s if CRDER1 (in Angstroms) is in fits header
+        :return: radial velocity
+        :rtype: float
+        """
+        error = float(self._header['CRDER1']
+                      ) if 'CRDER1' in self._header else 0
+        c = const.c.to('km/s')
+        return abs(c * (error / self._conf["LAMBDA_REF"])).value
+
+    def getSNR(self):
+        return self._snr
 
     def getJD(self):
         """
@@ -172,6 +188,48 @@ class SBSpectrum1D(Spectrum1D):
     def getDebugLineFitting(self):
         return self._debug_line_fitting
 
+    def findSNR(self, lamb1=6610, lamb2=6625):
+        # nombre de points dans le spectre d'entrée
+        nbx = self._header['NAXIS1']
+
+        x = np.arange(0, nbx, 1)
+
+        lamb = x * self._header['CDELT1'] + \
+            self._header['CRVAL1']  # table des longueurs d'onde
+
+        if lamb1 < lamb[0] or lamb2 > lamb[-1]:
+            return 0, 0, 0, False
+
+        # On isole la zone de calcul
+        id1 = np.argwhere(lamb >= lamb1)[0][0]
+        id2 = np.argwhere(lamb >= lamb2)[0][0]
+        lamb_forsnr = lamb[id1:id2]
+        data_forsnr = self.flux[id1:id2].to_value()
+
+        # Méthode d'ajustement
+        fitter = fitting.LinearLSQFitter()
+
+        # Ajustement linéaire
+        model = models.Linear1D()
+        fitted_model = fitter(model, lamb_forsnr, data_forsnr)
+
+        # Calcul du continuum
+        fc = fitted_model(lamb_forsnr)
+
+        # Calcul du signal moyen
+        signal = np.mean(fc)
+
+        # Soustraction du continuum et calcul de l'écart-type
+        data_noconti = data_forsnr - fc
+
+        bruit = np.std(data_noconti)
+        if bruit != 0.0:
+            snr = signal / bruit
+        else:
+            snr = 0.0
+
+        self._snr = snr
+
     def findCenterOfLine(self):
         """
         Find the center of the line in a spectrum using a fit (models available : Gaussian1D, Lorentz1D, Voigt1D)
@@ -226,7 +284,7 @@ class SBSpectrum1D(Spectrum1D):
         self._center_of_line = center.value
 
     def __str__(self):
-        return f"Spectrum : {self._basename}\n- obs: {self._observer}\n- jd: {self._jd}\n- center: {self._center_of_line} A\n- {self._conf['RV_CORR_TYPE']}: {self._rv_corr}\n- rv: {self._rv}\n "
+        return f"Spectrum : {self._basename}\n- obs: {self._observer}\n- jd: {self._jd}\n- snr: {self._snr}\n- center: {self._center_of_line} A\n- {self._conf['RV_CORR_TYPE']}: {self._rv_corr}\n- rv: {self._rv}\n- error: {self.getError()}\n"
 
 #
 
@@ -379,7 +437,8 @@ class SpectroscopicBinarySystem:
         # write result file for BinaryStarSolver
         with open(f'{self._spectra_path}/sbs_results.txt', 'w') as f:
             for s in self._sb_spectra:
-                output = f"{float(s.getJD()) - 2400000.0} {round(s.getRV(), 3)}"
+                error = 1 / s.getError() if s.getError() else 1
+                output = f"{float(s.getJD()) - 2400000.0} {round(s.getRV(), 3)} {error}"
                 f.write(output + '\n')
 
         # [γ, K, ω, e, T0, P, a, f(M)]
@@ -430,6 +489,7 @@ class SpectroscopicBinarySystem:
             f'- P = {params[5]} ± {err[5]}',
             f'- a = {params[6]} ± {err[6]}',
             f'- f(M) = {params[7]} ± {err[7]}',
+            f'- Error sums = {sum(err)}',
             sep='\n')
 
     def getOrbitalSolution(self):
@@ -502,8 +562,10 @@ class SpectroscopicBinarySystem:
             delta = s.getRV() - self._model_y[xindex]
             self._residuals.append(delta)
             fmt = instruments[label] if group_by_instruments else 'o'
+            error = s.getError()
+            capsize = 3 if error else 0
             axs[1].errorbar(s.getPhase(), delta,
-                            yerr=0, fmt=fmt, ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
+                            yerr=s.getError(), fmt=fmt, ecolor='k', capsize=capsize, color=color, lw=.7, markersize=5)
 
         print(
             f'- Residual standard deviation : {np.std(self._residuals)}')
