@@ -163,7 +163,11 @@ plt.rcParams['font.size'] = '8'
 plt.rcParams['font.family'] = 'monospace'
 
 # 1 run with gaussian model
-run('gaussian', 5000, snr=200)
+# run('gaussian', 1000, snr=50)
+# run('gaussian', 1000, snr=200)
+# run('gaussian', 1000, snr=400)
 
 # 2 run with lorentz model
-run('lorentz', 5000, snr=200)
+run('lorentz', 1000, snr=50)
+run('lorentz', 1000, snr=200)
+run('lorentz', 1000, snr=400)
