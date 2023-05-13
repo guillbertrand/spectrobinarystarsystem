@@ -111,18 +111,18 @@ class SBSpectrum1D(Spectrum1D):
         calibration_error = float(
             self._header['CRDER1']) if 'CRDER1' in self._header else 0
         calibration_error = abs(
-            c * (calibration_error / self._conf["LAMBDA_REF"]))
+            c * (calibration_error / self._conf["LAMBDA_REF"])).value
 
         center_error = 0
+        if self._snr and self._line_fit_fwhm:
+            fwhm = self._line_fit_fwhm
+            cdelt1 = self._header['CDELT1']
+            fwhm_rv = c * fwhm / self._center_of_line
+            center_error = (.55 *
+                            (fwhm_rv/(.68 * self._snr *
+                                      np.sqrt(fwhm/cdelt1)))).value
 
-        fwhm = self._line_fit_fwhm
-        cdelt1 = self._header['CDELT1']
-        fwhm_rv = c * fwhm / self._center_of_line
-        center_error = .55 * \
-            (fwhm_rv/(.68 * self._snr *
-                      np.sqrt(fwhm/cdelt1)))
-
-        return calibration_error.value + center_error.value
+        return calibration_error + center_error
 
     def getSNR(self):
         return self._snr
@@ -245,11 +245,9 @@ class SBSpectrum1D(Spectrum1D):
 
     def findCenterOfLine(self):
         """
-        Find the center of the line in a spectrum using a fit (models available : Gaussian1D, Lorentz1D, Voigt1D)
+        Find the center of the line in a spectrum using a fit (models available : Gaussian1D, Lorentz1D)
         :return: None
         """
-        w1 = float(self._conf['LINE_FIT_WINDOW_WIDTH']) / 2
-        w2 = float(self._conf['LINE_FIT_CONT_NORM_EXCLUDE_WIDTH']) / 2
         fwhm = float(self._conf['LINE_FIT_FWHM'])
         gauss_smooth_std = float(self._conf['LINE_FIT_GAUSS_SMOOTH_STD'])
 
@@ -261,14 +259,15 @@ class SBSpectrum1D(Spectrum1D):
         ipeak = spec1_gsmooth.flux[50:-50].argmin()
         xpeak = spec1_gsmooth.spectral_axis[50:-50][ipeak].to(u.AA)
 
-        sr_w1 = SpectralRegion(xpeak - (w1 * u.AA), xpeak + (w1 * u.AA))
-        sr_w2 = SpectralRegion(xpeak - (w2 * u.AA), xpeak + (w2 * u.AA))
+        sr_w1 = SpectralRegion(xpeak - (fwhm * 2.5 * u.AA),
+                               xpeak + (fwhm * 2.5 * u.AA))
+        sr_w2 = SpectralRegion(xpeak - (fwhm * u.AA), xpeak + (fwhm * u.AA))
 
         spec1d_line = extract_region(Spectrum1D(
             flux=self.flux, wcs=self.wcs), sr_w1)
 
         # continuum normalization of the extracted spectral region
-        s_fit = fit_generic_continuum(spec1d_line, exclude_regions=[sr_w2])
+        s_fit = fit_generic_continuum(spec1d_line)
         spec1d_line = spec1d_line / s_fit(spec1d_line.spectral_axis)
         spec1d_line -= 1
 
@@ -277,9 +276,6 @@ class SBSpectrum1D(Spectrum1D):
             case 'gaussian':
                 g_init = models.Gaussian1D(
                     mean=xpeak, amplitude=spec1d_line.flux.argmin())
-            case 'voigt':
-                g_init = models.Voigt1D(
-                    x_0=xpeak, amplitude_L=spec1d_line.flux.argmin())
             case 'lorentz':
                 g_init = models.Lorentz1D(x_0=xpeak, fwhm=fwhm)
 
@@ -293,9 +289,6 @@ class SBSpectrum1D(Spectrum1D):
             case 'lorentz':
                 center = g_fit.x_0
                 fwhm = g_fit.fwhm
-            case _:
-                center = g_fit.x_0
-                fwhm = g_fit.fwhm_L
 
         self._debug_line_fitting = (spec1d_line, y_fit, extract_region(Spectrum1D(
             flux=spec1_gsmooth.flux, wcs=self.wcs), sr_w1))

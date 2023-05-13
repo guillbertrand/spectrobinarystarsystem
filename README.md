@@ -67,13 +67,12 @@ sbs = SpectroscopicBinarySystem(
     period_guess=51,
     conf={
         "LAMBDA_REF": 6562.82,
-        "LINE_FIT_MODEL": "voigt",
-        "LINE_FIT_WINDOW_WIDTH": 10,
-        "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1,
+        "LINE_FIT_MODEL": "gaussian",
+        "LINE_FIT_FWHM": 1.0,
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
-    verbose=True
+    verbose=False,
     debug=False)
 
 # plot result with matplotlib and save the results
