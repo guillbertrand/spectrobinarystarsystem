@@ -23,7 +23,7 @@ def computeConstA_Method1(rv, fwhm, snr, contrast, n):
     return rv / (fwhm / (contrast * snr * np.sqrt(n)))
 
 
-def computeConstB_Method2(rv, fwhm, p, snr, contrast, center):
+def computeConstB_Method2(rv, fwhm, p, snr, contrast):
     """
     return a constant for a given radial velocity error in km.s-1 (BOUCHY)
     """
@@ -67,13 +67,13 @@ def findCenterOfLine(spectrum1d, fwhm, model_type='gaussian'):
 #
 
 
-def runMonteCarlo(n_samples, contrast, snr, center, fwhm, model, ax, first):
+def runMonteCarlo(n_samples, spectral_sample_value, contrast, snr, center, fwhm, model, ax, first):
     """
     Generate n_samples synthetic spectra with random noise and return standard deviation
     """
 
     wavelength_window = (6540, 6580)
-    scale = contrast / snr
+    scale = 1 / snr
 
     match model:
         case 'gaussian':
@@ -83,7 +83,8 @@ def runMonteCarlo(n_samples, contrast, snr, center, fwhm, model, ax, first):
             line = models.Lorentz1D(-contrast, x_0=center, fwhm=fwhm)
     #
 
-    x = np.arange(wavelength_window[0], wavelength_window[1], .05)
+    x = np.arange(wavelength_window[0],
+                  wavelength_window[1], spectral_sample_value)
 
     errors = []
 
@@ -111,6 +112,7 @@ def getRV(std, lambda_ref=6562.82):
 
 
 def run(model, n_samples, snr):
+    spectral_sample_value = .1
     contrast = .68
     center = 6560.123
     fwhm = np.arange(2, 8, .5)
@@ -119,27 +121,29 @@ def run(model, n_samples, snr):
     for i in range(len(fwhm)):
         # run monteCarlo
         std = runMonteCarlo(
-            n_samples, contrast, snr, center, fwhm[i], model=model, ax=ax4, first=i == 1)
+            n_samples, spectral_sample_value, contrast, snr, center, fwhm[i], model=model, ax=ax4, first=i == 1)
 
         # compute A constant with first method
         a = computeConstA_Method1(
-            getRV(std), getRV(fwhm[i]), snr, contrast, fwhm[i]/.05)
+            getRV(std), getRV(fwhm[i], center), snr, contrast, fwhm[i]/spectral_sample_value)
 
         # compure B constant with second method
         b = computeConstB_Method2(
-            getRV(std), getRV(fwhm[i]), snr, getRV(.05), contrast, center)
+            getRV(std), getRV(fwhm[i], center), getRV(spectral_sample_value), snr, contrast)
 
-        print(f'rms : {std}  a : {a}  b : {b}')
+        print(f'std : {std}  a : {a}  b : {b}')
         ax1.plot(a, fwhm[i], "ko")
         ax2.plot(b, fwhm[i], "ko")
         ax3.plot(std, fwhm[i], "ko")
         aa.append(a.value)
         bb.append(b.value)
 
-    ax1.set_title(f'Method 1 : Constant A', fontname='monospace', size=8)
+    ax1.set_title(
+        f'Method 1 : Constant A, mean={np.mean(aa)}', fontname='monospace', size=8)
     ax1.set_xlabel('Constant A', fontname='monospace', size=8)
     ax1.set_ylabel('FWHM', fontname='monospace', size=8)
-    ax2.set_title(f'Method 2 : Constant B', fontname='monospace', size=8)
+    ax2.set_title(
+        f'Method 2 : Constant B, mean={np.mean(bb)}', fontname='monospace', size=8)
     ax2.set_xlabel('Constant B', fontname='monospace', size=8)
     ax2.set_ylabel('FWHM', fontname='monospace', size=8)
     ax3.set_title(f'Standard deviation in km/s', fontname='monospace', size=8)
@@ -163,11 +167,11 @@ plt.rcParams['font.size'] = '8'
 plt.rcParams['font.family'] = 'monospace'
 
 # 1 run with gaussian model
-run('gaussian', 1000, snr=50)
-run('gaussian', 1000, snr=200)
-run('gaussian', 1000, snr=400)
+run('gaussian', 100, snr=50)
+run('gaussian', 100, snr=200)
+run('gaussian', 100, snr=400)
 
 # 2 run with lorentz model
-run('lorentz', 1000, snr=50)
-run('lorentz', 1000, snr=200)
-run('lorentz', 1000, snr=400)
+run('lorentz', 100, snr=50)
+run('lorentz', 100, snr=200)
+run('lorentz', 100, snr=400)
