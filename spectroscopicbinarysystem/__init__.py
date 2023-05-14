@@ -113,16 +113,7 @@ class SBSpectrum1D(Spectrum1D):
         calibration_error = abs(
             c * (calibration_error / self._conf["LAMBDA_REF"])).value
 
-        center_error = 0
-        if self._snr and self._line_fit_fwhm:
-            fwhm = self._line_fit_fwhm
-            cdelt1 = self._header['CDELT1']
-            fwhm_rv = c * fwhm / self._center_of_line
-            center_error = (.55 *
-                            (fwhm_rv/(.68 * self._snr *
-                                      np.sqrt(fwhm/cdelt1)))).value
-
-        return calibration_error + center_error
+        return calibration_error
 
     def getSNR(self):
         return self._snr
@@ -200,48 +191,6 @@ class SBSpectrum1D(Spectrum1D):
 
     def getDebugLineFitting(self):
         return self._debug_line_fitting
-
-    def findSNR(self, lamb1=6600, lamb2=6610):
-        # nombre de points dans le spectre d'entrée
-        nbx = self._header['NAXIS1']
-
-        x = np.arange(0, nbx, 1)
-
-        lamb = x * self._header['CDELT1'] + \
-            self._header['CRVAL1']  # table des longueurs d'onde
-
-        if lamb1 < lamb[0] or lamb2 > lamb[-1]:
-            return 0, 0, 0, False
-
-        # On isole la zone de calcul
-        id1 = np.argwhere(lamb >= lamb1)[0][0]
-        id2 = np.argwhere(lamb >= lamb2)[0][0]
-        lamb_forsnr = lamb[id1:id2]
-        data_forsnr = self.flux[id1:id2].to_value()
-
-        # Méthode d'ajustement
-        fitter = fitting.LinearLSQFitter()
-
-        # Ajustement linéaire
-        model = models.Linear1D()
-        fitted_model = fitter(model, lamb_forsnr, data_forsnr)
-
-        # Calcul du continuum
-        fc = fitted_model(lamb_forsnr)
-
-        # Calcul du signal moyen
-        signal = np.mean(fc)
-
-        # Soustraction du continuum et calcul de l'écart-type
-        data_noconti = data_forsnr - fc
-
-        bruit = np.std(data_noconti)
-        if bruit != 0.0:
-            snr = signal / bruit
-        else:
-            snr = 0.0
-
-        self._snr = snr
 
     def findCenterOfLine(self):
         """
