@@ -73,7 +73,6 @@ class SBSpectrum1D(Spectrum1D):
             super().__init__(flux=flux, wcs=wcs_data)
 
             # analyse spectrum
-            self.findSNR()
             self.findCenterOfLine()
             self.findRVCorrection()
             self.findRV()
