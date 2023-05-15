@@ -538,7 +538,7 @@ class SpectroscopicBinarySystem:
 
         plt.rcParams['font.size'] = font_size
         plt.rcParams['font.family'] = font_family
-        fig, axs = plt.subplots(2, 1, figsize=(11, 7), gridspec_kw={
+        fig, axs = plt.subplots(2, 1, figsize=(12, 7), gridspec_kw={
             'height_ratios': [4, 1]}, sharex=True)
         axs[1].set_xlabel('Phase', fontdict=None,
                           labelpad=None, fontname='monospace', size=8)
