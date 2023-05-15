@@ -1,5 +1,6 @@
 # matplotlib
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 # numpy
 import numpy as np
@@ -40,39 +41,22 @@ def findCenterOfLine(spectrum1d, fwhm, model_type='gaussian'):
 
     s = spectrum1d - 1
 
-    match model_type:
-        case 'gaussian':
-            g_init = models.Gaussian1D(
-                mean=xpeak, amplitude=s.flux.argmin())
-        case 'voigt':
-            g_init = models.Voigt1D(
-                x_0=xpeak, amplitude_L=2 / (np.pi * fwhm))
-        case 'lorentz':
-            g_init = models.Lorentz1D(
-                amplitude=s.flux.argmin(), x_0=xpeak, fwhm=fwhm)
-    #
-
-    g_fit = fit_lines(s, g_init, window=[
-                      spectrum1d.spectral_axis.argmin(), spectrum1d.spectral_axis.argmax()])
+    g_init = models.Gaussian1D(mean=xpeak, amplitude=s.flux.argmin()) if model_type == 'gaussian' else models.Lorentz1D(amplitude=s.flux.argmin(), x_0=xpeak, fwhm=fwhm)
+    g_fit = fit_lines(s, g_init, window=[spectrum1d.spectral_axis.argmin(), spectrum1d.spectral_axis.argmax()])
     y_fit = g_fit(s.spectral_axis)
 
-    match model_type:
-        case 'gaussian':
-            center = g_fit.mean
-        case _:
-            center = g_fit.x_0
+    center = g_fit.mean if model_type == 'gaussian' else g_fit.x_0
 
     return (center.value, y_fit + 1*u.Jy)
 
 #
 
 
-def runMonteCarlo(n_samples, spectral_sample_value, contrast, snr, center, fwhm, model, ax, first):
+def runMonteCarlo(n_samples, spectral_sample_value, contrast, snr, center, fwhm, model):
     """
     Generate n_samples synthetic spectra with random noise and return standard deviation
     """
-
-    wavelength_window = (6540, 6580)
+    wavelength_window = (6530, 6590)
     scale = 1 / snr
 
     match model:
@@ -87,23 +71,20 @@ def runMonteCarlo(n_samples, spectral_sample_value, contrast, snr, center, fwhm,
                   wavelength_window[1], spectral_sample_value)
 
     errors = []
+    synthetic_spectrum, y_fit = None, None
 
     for i in range(n_samples):
         y = line(x) + np.random.normal(1., scale, x.shape)
         spectrum = Spectrum1D(flux=y*u.Jy, spectral_axis=x*u.AA)
         r = findCenterOfLine(spectrum, fwhm, model)
         errors.append(r[0]-center)
-        if i == 0 and first:
-            ax.plot(spectrum.spectral_axis, spectrum.flux, 'k-')
-            ax.plot(spectrum.spectral_axis[100:-100],
-                    r[1][100:-100], 'r-')
-            ax.set_xlabel('Spectral Axis ({})'.format(
-                spectrum.spectral_axis.unit))
-            ax.set_ylabel('Flux Axis({})'.format(spectrum.flux.unit))
+        if i == 0:
+            synthetic_spectrum = spectrum
+            y_fit = r[1]
 
         std = np.std(errors)
-        print(f'{i+1}/{n_samples} std={std}')
-    return std
+        #print(f'{i+1}/{n_samples} std={std}')
+    return std, synthetic_spectrum, y_fit
 
 
 def getRV(std, lambda_ref=6562.82):
@@ -111,39 +92,77 @@ def getRV(std, lambda_ref=6562.82):
     return (c * std / lambda_ref)
 
 
-def run(model, n_samples, snr):
-    spectral_sample_value = .1
-    contrast = .68
+def run(model, n_samples, snr=150, contrast=.68, spectral_sample_value=.1, fwhm=1):
     center = 6560.123
-    fwhm = np.arange(2, 8, .5)
+
+    # run monteCarlo
+    std, synthetic_spectrum, y_fit = runMonteCarlo(
+                                        n_samples=n_samples, 
+                                        spectral_sample_value=spectral_sample_value, 
+                                        contrast=contrast, 
+                                        snr=snr, 
+                                        center=center, 
+                                        fwhm=fwhm, 
+                                        model=model)
+
+    # compute A constant with first method
+    a = computeConstA_Method1(
+        rv=getRV(std), 
+        fwhm=getRV(fwhm, center), 
+        snr=snr, 
+        contrast=contrast, 
+        n=fwhm/spectral_sample_value)
+
+    # compure B constant with second method
+    b = computeConstB_Method2(
+        rv=getRV(std), 
+        fwhm=getRV(fwhm, center), 
+        p=getRV(spectral_sample_value,center), 
+        snr=snr,
+        contrast=contrast)
+
+    return (a, b, std, synthetic_spectrum, y_fit)
+
+
+def testWithMultipleFWHMandSNR(model='gaussian', snr=150, n_samples=100):
+    plt.rcParams['font.size'] = '8'
+    plt.rcParams['font.family'] = 'monospace'
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 7))
-    aa, bb = [], []
-    for i in range(len(fwhm)):
-        # run monteCarlo
-        std = runMonteCarlo(
-            n_samples, spectral_sample_value, contrast, snr, center, fwhm[i], model=model, ax=ax4, first=i == 1)
+    #
+    a_arr, b_arr, std_arr = [],[],[]
+    fwhm_arr = np.arange(1,9,1)
+    snr_arr = np.linspace(50,400, 8)
+    c = .68
+    spectral_sample_value = .1
 
-        # compute A constant with first method
-        a = computeConstA_Method1(
-            getRV(std), getRV(fwhm[i], center), snr, contrast, fwhm[i]/spectral_sample_value)
+    cmap = plt.get_cmap('tab20')
+    colors = cmap((np.arange(8)).astype(int), alpha=1)
 
-        # compure B constant with second method
-        b = computeConstB_Method2(
-            getRV(std), getRV(fwhm[i], center), getRV(spectral_sample_value), snr, contrast)
+    for ii, f in enumerate(fwhm_arr):
+        for i, s in enumerate(snr_arr):
+            print(f'fwhm:{f} snr:{s}')
+            a, b, std, spectrum, y_fit = run(model, n_samples=n_samples, contrast=c, spectral_sample_value=spectral_sample_value, snr=s, fwhm=f)
+            a_arr.append(a)
+            b_arr.append(b)
+            std_arr.append(std)
+            ax1.plot(a, f, color=colors[i], marker="o")
+            ax2.plot(b, f, color=colors[i], marker="o")
+            ax3.plot(std, f, color=colors[i], marker="o") 
 
-        print(f'std : {std}  a : {a}  b : {b}')
-        ax1.plot(a, fwhm[i], "ko")
-        ax2.plot(b, fwhm[i], "ko")
-        ax3.plot(std, fwhm[i], "ko")
-        aa.append(a.value)
-        bb.append(b.value)
+            if ii==5:
+                ax4.plot(spectrum.spectral_axis , spectrum.flux+ (i * .1)*u.Jy, color=colors[i], label=f'SNR {s}')
+                ax4.plot(spectrum.spectral_axis[100:-100] , y_fit[100:-100] + (i * .1)*u.Jy, 'r-')
+                ax4.set_xlabel('Spectral Axis ({})'.format(
+                    spectrum.spectral_axis.unit))
+                ax4.set_ylabel('Flux Axis({})'.format(spectrum.flux.unit))
 
+    ax4.legend()
     ax1.set_title(
-        f'Method 1 : Constant A, mean={np.mean(aa)}', fontname='monospace', size=8)
+        f'Method 1 : Constant A, mean={np.mean(a_arr)}', fontname='monospace', size=8)
     ax1.set_xlabel('Constant A', fontname='monospace', size=8)
     ax1.set_ylabel('FWHM', fontname='monospace', size=8)
     ax2.set_title(
-        f'Method 2 : Constant B, mean={np.mean(bb)}', fontname='monospace', size=8)
+        f'Method 2 : Constant B, mean={np.mean(b_arr)}', fontname='monospace', size=8)
     ax2.set_xlabel('Constant B', fontname='monospace', size=8)
     ax2.set_ylabel('FWHM', fontname='monospace', size=8)
     ax3.set_title(f'Standard deviation in km/s', fontname='monospace', size=8)
@@ -154,24 +173,15 @@ def run(model, n_samples, snr):
     ax3.grid(True)
     ax4.grid(True)
     fig.suptitle(
-        f'Profil: {model}, SNR: {snr}, Contrast: {contrast}, n_samples: {n_samples}', fontsize=10)
+        f'Profil: {model}, Contrast: {c}, n_samples: {n_samples}', fontsize=10)
     plt.tight_layout(pad=2, w_pad=2, h_pad=2)
     plt.savefig(
-        f'rv_error_const_{model}_snr_{snr}_sample_{n_samples}.png', dpi=150)
+        f'rv_error_estimator_{model}_sample_{n_samples}.png', dpi=150)
     plt.show()
 
-# -------------------------------------------------
+ 
 
+if __name__ == '__main__':
+    testWithMultipleFWHMandSNR('gaussian', n_samples=2000)
+    testWithMultipleFWHMandSNR('lorentz', n_samples=2000)
 
-plt.rcParams['font.size'] = '8'
-plt.rcParams['font.family'] = 'monospace'
-
-# 1 run with gaussian model
-run('gaussian', 100, snr=50)
-run('gaussian', 100, snr=200)
-run('gaussian', 100, snr=400)
-
-# 2 run with lorentz model
-run('lorentz', 100, snr=50)
-run('lorentz', 100, snr=200)
-run('lorentz', 100, snr=400)
