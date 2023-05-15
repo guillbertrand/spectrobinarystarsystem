@@ -88,7 +88,7 @@ sbs.plotSpec2DFlux(
     savefig=True
 )
 
-# display result with plotl
+# display result with plotly
 sbs.plotlyRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
     group_by_instrument=False)
