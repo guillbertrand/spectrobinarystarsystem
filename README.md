@@ -1,7 +1,7 @@
 
 # Spectroscopic Binary System
 
-[![PyPI version](https://badge.fury.io/py/spectroscopicbinarysystem.svg?1.4.0)](https://badge.fury.io/py/spectroscopicbinarysystem)
+[![PyPI version](https://badge.fury.io/py/spectroscopicbinarysystem.svg?1.3.0)](https://badge.fury.io/py/spectroscopicbinarysystem)
 
 **Spectroscopic Binary System** is a package intended to contain functionality and some common tools needed for performing astrophysics on spectroscopic binary stars with Python. It allows, among other things, to automatically measure the radial velocity of SB1 type systems and to find their orbital solution with **BinaryStarSolver** (https://github.com/NickMilsonPhysics/BinaryStarSolver)
 
@@ -73,8 +73,7 @@ sbs = SpectroscopicBinarySystem(
         "SB_TYPE": 1
     },
     verbose=False,
-    debug=False,
-    nocache=False)
+    debug=False)
 
 # plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
