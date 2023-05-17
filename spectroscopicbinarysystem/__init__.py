@@ -3,6 +3,8 @@ import os
 import copy
 import math
 import warnings
+import pickle
+from hashlib import md5
 
 # numpy
 import numpy as np
@@ -246,6 +248,17 @@ class SBSpectrum1D(Spectrum1D):
         self._center_of_line = center.value
         self._line_fit_fwhm = fwhm.value
 
+    def asdict(self):
+        return {'jd': self.getJD(),
+                'date': self.getDate(),
+                'observer': self.getObserver(),
+                'instrument': self.getInstrument(),
+                'basename': self.getBaseName(),
+                'rv': self.getRV(),
+                'error': self.getError(),
+                'center': self.getCenterOfLine(),
+                'phase': self.getPhase()}
+
     def __str__(self):
         return f"Spectrum : {self._basename}\n- obs: {self._observer}\n- jd: {self._jd}\n- snr: {self._snr}\n- center: {self._center_of_line} A\n- {self._conf['RV_CORR_TYPE']}: {self._rv_corr}\n- rv: {self._rv}\n- error: {self.getError()}\n"
 
@@ -270,7 +283,7 @@ class SpectroscopicBinarySystem:
     :param debug: Allow to activate log and some additional plots for debug purpose
     """
 
-    def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, verbose=False, debug=False):
+    def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, verbose=False, debug=False, nocache=False):
 
         self._conf = {"LAMBDA_REF": 6562.82,
                       "LINE_FIT_MODEL": "gaussian",
@@ -280,17 +293,28 @@ class SpectroscopicBinarySystem:
                       "SB_TYPE": 1}
 
         self._sb_spectra = []
+        self._sb_spectra_dict = []
         self._spectra_filename = []
         self._orbital_solution = None
         self._spectra_path = spectra_path
         self._object_name = object_name
         self._type = type
+        self._nocache = nocache
         self._t0 = t0
         self._period = period
         self._period_guess = period_guess
         self._debug = debug
         self._verbose = verbose
         self._residuals = []
+        self._key = str(self._conf).encode()
+        for root, dirs, files in os.walk(self._spectra_path):
+            for file in files:
+                regex = re.compile('(.*).fit')
+                if (re.match(regex, file)):
+                    spectrum_filename = os.path.join(
+                        self._spectra_path, file)
+                    self._key += spectrum_filename.encode()
+        self._key = md5(self._key).hexdigest()
 
         # load user configuration or defaults
         if conf:
@@ -310,20 +334,38 @@ class SpectroscopicBinarySystem:
             self._skycoord = SkyCoord(f'{ra} {dec}', unit=(u.hourangle, u.deg))
 
     def __loadSpectra(self):
-        for root, dirs, files in os.walk(self._spectra_path):
-            for file in files:
-                regex = re.compile('(.*).fit')
-                if (re.match(regex, file)):
-                    spectrum_filename = os.path.join(self._spectra_path, file)
-                    sbSpec1D = SBSpectrum1D(
-                        spectrum_filename, self._skycoord, self._conf)
-                    self._sb_spectra.append(sbSpec1D)
-                    if self._verbose:
-                        print(sbSpec1D)
+        """
+        Load all spectra and create SBSpectrum1D objects
+        """
+        pickle_file = os.path.join(
+            self._spectra_path, f"{self._key}_spectra.pickle")
+        if os.path.exists(pickle_file) and not self._nocache:
+            with open(pickle_file, "rb") as infile:
+                self._sb_spectra_dict = pickle.load(infile)
+        else:
+            self._sb_spectra = []
+            self._sb_spectra_dict = []
+            for root, dirs, files in os.walk(self._spectra_path):
+                for file in files:
+                    regex = re.compile('(.*).fit')
+                    if (re.match(regex, file)):
+                        spectrum_filename = os.path.join(
+                            self._spectra_path, file)
+                        sbSpec1D = SBSpectrum1D(
+                            spectrum_filename, self._skycoord, self._conf)
+                        self._sb_spectra.append(sbSpec1D)
+                        self._sb_spectra_dict.append(sbSpec1D.asdict())
+                        if self._verbose:
+                            print(sbSpec1D)
+            if not self._nocache:
+                with open(pickle_file, "wb") as outfile:
+                    pickle.dump(self._sb_spectra_dict, outfile)
 
         if self._verbose:
-            print(f'{len(self._sb_spectra)} processed spectra')
-        if self._debug:
+            print(f'key : {self._key}')
+            print(f'{len(self._sb_spectra_dict)} processed spectra')
+
+        if self._debug and self._sb_spectra:
             plt.rcParams['font.size'] = '6'
             plt.rcParams['font.family'] = 'monospace'
 
@@ -369,7 +411,7 @@ class SpectroscopicBinarySystem:
         :return: count
         :rtype: int
         """
-        return len(self._sb_spectra)
+        return len(self._sb_spectra_dict)
 
     def __getPhase(self, jd0, period, jd):
         """
@@ -405,29 +447,40 @@ class SpectroscopicBinarySystem:
         """
         Compute the orbital solution with BinaryStarSolver
         """
-        # write result file for BinaryStarSolver
-        with open(f'{self._spectra_path}/sbs_results.txt', 'w') as f:
-            for s in self._sb_spectra:
-                error = 1 / s.getError() if s.getError() else 1
-                output = f"{float(s.getJD()) - 2400000.0} {round(s.getRV(), 3)} {error}"
-                f.write(output + '\n')
+        pickle_file = os.path.join(
+            self._spectra_path, f"{self._key}_orbital.pickle")
+        if os.path.exists(pickle_file) and not self._nocache:
+            with open(pickle_file, "rb") as infile:
+                self._orbital_solution = pickle.load(infile)
+                params, err, cov = self._orbital_solution
+        else:
+            # write result file for BinaryStarSolver
+            with open(f'{self._spectra_path}/sbs_results.txt', 'w') as f:
+                for s in self._sb_spectra:
+                    error = 1 / s.getError() if s.getError() else 1
+                    output = f"{float(s.getJD()) - 2400000.0} {round(s.getRV(), 3)} {error}"
+                    f.write(output + '\n')
 
-        # [γ, K, ω, e, T0, P, a, f(M)]
-        try:
-            params, err, cov = StarSolve(
-                data_file=f"{self._spectra_path}/sbs_results.txt",
-                star="primary",
-                Period=self._period,
-                Pguess=self._period_guess,
-                covariance=True,
-                graphs=False,
-            )
-        except:
-            print(
-                'An exception occurred : the calculation of the orbital solution failed')
-            exit()
+            # [γ, K, ω, e, T0, P, a, f(M)]
+            try:
+                params, err, cov = StarSolve(
+                    data_file=f"{self._spectra_path}/sbs_results.txt",
+                    star="primary",
+                    Period=self._period,
+                    Pguess=self._period_guess,
+                    covariance=True,
+                    graphs=False,
+                )
+            except:
+                print(
+                    'An exception occurred : the calculation of the orbital solution failed')
+                exit()
 
-        self._orbital_solution = (params, err, cov)
+            self._orbital_solution = (params, err, cov)
+
+            if not self._nocache:
+                with open(pickle_file, "wb") as outfile:
+                    pickle.dump(self._orbital_solution, outfile)
 
         # If self._t0 compute phase delta between T0 of the model and the fixed value
         if self._t0:
@@ -442,16 +495,20 @@ class SpectroscopicBinarySystem:
             self._v0 = 0
 
         period = self._orbital_solution[0][5]
-        for s in self._sb_spectra:
+        if self._sb_spectra:
+            for s in self._sb_spectra:
+                # compute phase of the sytem
+                s.setPhase(self.__getPhase(float(self._t0), period, s.getJD()))
+
+        for s in self._sb_spectra_dict:
             # compute phase of the sytem
-            jd = s.getJD()
-            phase = self.__getPhase(float(self._t0), period, jd)
-            s.setPhase(phase)
+            jd = s['jd']
+            s['phase'] = self.__getPhase(float(self._t0), period, jd)
             if self._verbose:
-                print(f"{s.getBaseName()} phase : {phase}")
+                print(f"{s['basename']} phase : {s['phase']}")
 
         print(
-            f'{self._object_name} orbital solution with {len(self._sb_spectra)} spectra',
+            f'{self._object_name} orbital solution with {len(self._sb_spectra_dict)} spectra',
             f'- γ = {params[0]} ± {err[0]}',
             f'- K = {params[1]} ± {err[1]}',
             f'- ω = {params[2]} ± {err[2]}',
@@ -498,45 +555,45 @@ class SpectroscopicBinarySystem:
         + cmap((np.arange(20)).astype(int), alpha=.5)
 
         # sort sb spectra by observer name
-        self._sb_spectra.sort(key=lambda x: x.getObserver())
+        self._sb_spectra_dict.sort(key=lambda x: x['observer'])
 
-        for s in self._sb_spectra:
+        for s in self._sb_spectra_dict:
 
             # get the observer
-            obs = s.getObserver()
+            obs = s['observer']
             if (obs not in observers.keys()):
                 observers[obs] = colors[color_number]
                 color_number += 1
                 if not group_by_instruments:
-                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                    axs[0].errorbar(s['phase'], s['rv'], yerr=0,
                                     fmt='o', ecolor='k', label=obs, capsize=0, color=observers[obs], lw=.7, markersize=5)
             elif not group_by_instruments:
-                axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                axs[0].errorbar(s['phase'], s['rv'], yerr=0,
                                 fmt='o', ecolor='k', capsize=0, color=observers[obs], lw=.7, markersize=5)
             color = observers[obs]
 
             # get the instrument
             if (group_by_instruments):
-                label = f"{obs} - {s.getInstrument()[:30]}…"
+                label = f"{obs} - {s['instrument'][:30]}…"
                 if label not in instruments.keys():
                     if obs not in marker_index:
                         marker_index[obs] = 0
                     instruments[label] = markers_style[marker_index[obs]]
                     marker_index[obs] += 1
-                    axs[0].errorbar(s.getPhase(), s.getRV(
-                    ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
+                    axs[0].errorbar(s['phase'], s['rv'], yerr=0, label=label, ecolor='k',
+                                    capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
                 else:
-                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                    axs[0].errorbar(s['phase'], s['rv'], yerr=0,
                                     fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
 
-            xindex = self.__findNearest(self._model_x, s.getPhase())
-            delta = s.getRV() - self._model_y[xindex]
+            xindex = self.__findNearest(self._model_x, s['phase'])
+            delta = s['rv'] - self._model_y[xindex]
             self._residuals.append(delta)
             fmt = instruments[label] if group_by_instruments else 'o'
-            error = s.getError()
+            error = s['error']
             capsize = 3 if error else 0
-            axs[1].errorbar(s.getPhase(), delta,
-                            yerr=s.getError(), fmt=fmt, ecolor='k', capsize=capsize, color=color, lw=.7, markersize=5)
+            axs[1].errorbar(s['phase'], delta,
+                            yerr=s['error'], fmt=fmt, ecolor='k', capsize=capsize, color=color, lw=.7, markersize=5)
 
         print(
             f'- Residual standard deviation : {np.std(self._residuals)}')
@@ -638,14 +695,9 @@ class SpectroscopicBinarySystem:
         markers_style = ['circle', 'square',
                          'diamond', 'triangle-up', 'triangle-down']
 
-        for s in self._sb_spectra:
-            # compute phase of the sytem
-            jd = s.getJD()
-            phase = self.__getPhase(float(self._t0), period, jd)
-            s.setPhase(phase)
-
+        for s in self._sb_spectra_dict:
             # get the observer
-            obs = s.getObserver()
+            obs = s['observer']
             if (obs not in observers.keys()):
                 rgb = colors[color_number][:3] * 255
                 str_rgb = ",".join([str(rgb[0]), str(rgb[1]), str(rgb[2])])
@@ -655,11 +707,11 @@ class SpectroscopicBinarySystem:
 
             if group_by_instrument:
                 # get the instrument
-                label = f"{obs} - {s.getInstrument()[:30]}…"
+                label = f"{obs} - {s['instrument'][:30]}…"
                 if label in instruments:
                     fig.add_trace(
-                        go.Scatter(x=[phase],
-                                   y=[s.getRV()],
+                        go.Scatter(x=[s['phase']],
+                                   y=[s['rv']],
                                    mode='markers',
                                    marker_symbol=instruments[label],
                                    marker=dict(color=color,
@@ -671,8 +723,8 @@ class SpectroscopicBinarySystem:
                     instruments[label] = markers_style[marker_index[obs]]
                     marker_index[obs] += 1
                     fig.add_trace(
-                        go.Scatter(x=[phase],
-                                   y=[s.getRV()],
+                        go.Scatter(x=[s['phase']],
+                                   y=[s['rv']],
                                    mode='markers',
                                    name=label,
                                    marker_symbol=instruments[label],
@@ -681,10 +733,10 @@ class SpectroscopicBinarySystem:
                                    showlegend=True))
             else:  # no grouping
                 # set label to date
-                label = f"{obs} - {s.getDate()}"
+                label = f"{obs} - {s['date']}"
                 fig.add_trace(
-                    go.Scatter(x=[phase],
-                               y=[s.getRV()],
+                    go.Scatter(x=[s['phase']],
+                               y=[s['rv']],
                                mode='markers',
                                name=label,
                                marker_symbol='circle',
@@ -760,7 +812,11 @@ class SpectroscopicBinarySystem:
         plt.rcParams['font.size'] = font_size
         plt.rcParams['font.family'] = font_family
 
-        if not self._orbital_solution:
+        self._nocache = True
+        if not self._sb_spectra:
+            self.__loadSpectra()
+            self.__solveSystem()
+        elif not self._orbital_solution:
             self.__solveSystem()
 
         # sort sb spectra by phase
