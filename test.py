@@ -13,8 +13,7 @@ sbs = SpectroscopicBinarySystem(
         "SB_TYPE": 1
     },
     verbose=True,
-    debug=False,
-    nocache=False)
+    debug=False)
 
 # plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
