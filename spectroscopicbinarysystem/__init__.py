@@ -125,6 +125,9 @@ class SBSpectrum1D(Spectrum1D):
         """
         return float(self._header['JD-OBS'])
 
+    def getHeader(self):
+        return self._header
+
     def getDate(self):
         """
         Return 'DATE-OBS' header field
@@ -270,10 +273,8 @@ class SpectroscopicBinarySystem:
     def __init__(self, object_name, spectra_path, t0=None, period=None, period_guess=None, conf=None, verbose=False, debug=False):
 
         self._conf = {"LAMBDA_REF": 6562.82,
-                      "LINE_FIT_MODEL": "voigt",
-                      "LINE_FIT_WINDOW_WIDTH": 10,
-                      "LINE_FIT_CONT_NORM_EXCLUDE_WIDTH": 1.5,
-                      "LINE_FIT_FWHM": .5,
+                      "LINE_FIT_MODEL": "gaussian",
+                      "LINE_FIT_FWHM": 3.0,
                       "LINE_FIT_GAUSS_SMOOTH_STD": 10,
                       "RV_CORR_TYPE": "barycentric",
                       "SB_TYPE": 1}
@@ -353,6 +354,14 @@ class SpectroscopicBinarySystem:
                 plt.savefig(
                     f'{self._spectra_path}/{self._object_name}_debug_result_page_{page}.png', dpi=300)
                 plt.close(fig)
+
+    def getSpectra(self):
+        """
+        Return all processed spectra
+        :return: array of SBSpectrum1D
+        :rtype: array
+        """
+        return self._sb_spectra
 
     def getObservationCount(self):
         """
