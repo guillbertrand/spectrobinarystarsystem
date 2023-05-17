@@ -12,7 +12,7 @@ sbs = SpectroscopicBinarySystem(
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
-    verbose=True,
+    verbose=False,
     debug=False)
 
 # plot result with matplotlib and save the results
