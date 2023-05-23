@@ -1,5 +1,6 @@
 import re
 import os
+import csv
 import copy
 import math
 import warnings
@@ -291,6 +292,10 @@ class SpectroscopicBinarySystem:
         self._debug = debug
         self._verbose = verbose
         self._residuals = []
+        self._results_csv_filename = os.path.join(
+            self._spectra_path, 'sbss_results.csv')
+        self._bss_filename = os.path.join(
+            self._spectra_path, 'binarystarsolver_results.txt')
 
         # load user configuration or defaults
         if conf:
@@ -406,7 +411,7 @@ class SpectroscopicBinarySystem:
         Compute the orbital solution with BinaryStarSolver
         """
         # write result file for BinaryStarSolver
-        with open(f'{self._spectra_path}/sbs_results.txt', 'w') as f:
+        with open(self._bss_filename, 'w') as f:
             for s in self._sb_spectra:
                 error = 1 / s.getError() if s.getError() else 1
                 output = f"{float(s.getJD()) - 2400000.0} {round(s.getRV(), 3)} {error}"
@@ -415,7 +420,7 @@ class SpectroscopicBinarySystem:
         # [γ, K, ω, e, T0, P, a, f(M)]
         try:
             params, err, cov = StarSolve(
-                data_file=f"{self._spectra_path}/sbs_results.txt",
+                data_file=self._bss_filename,
                 star="primary",
                 Period=self._period,
                 Pguess=self._period_guess,
@@ -449,6 +454,18 @@ class SpectroscopicBinarySystem:
             s.setPhase(phase)
             if self._verbose:
                 print(f"{s.getBaseName()} phase : {phase}")
+
+        # export all results
+        res = [['JD-OBS', 'DATE-OBS', 'OBSERVER',
+                'INSTRUMENT', 'PHASE', 'CENTER', 'RV', 'ERROR']]
+        for s in self._sb_spectra:
+            res.append([s.getJD(), s.getDate(), s.getObserver(), s.getInstrument(
+            ), s.getPhase(), s.getCenterOfLine(), s.getRV(), s.getError()])
+
+        with open(self._results_csv_filename, 'w') as f:
+            mywriter = csv.writer(
+                f, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
+            mywriter.writerows(res)
 
         print(
             f'{self._object_name} orbital solution with {len(self._sb_spectra)} spectra',
