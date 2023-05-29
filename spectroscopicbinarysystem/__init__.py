@@ -60,6 +60,8 @@ class SBSpectrum1D(Spectrum1D):
         spectrum_file = fits.open(filename)
 
         self._header = spectrum_file[0].header
+        if not 'JD-OBS' in self._header and 'MJD-OBS' in self._header:
+            self._header['JD-OBS'] = float(self._header['MJD-OBS']) + 2400000
         self._jd = self._header['JD-OBS']
         self._observer = self._header['OBSERVER']
         with warnings.catch_warnings():  # Ignore warnings
@@ -167,7 +169,7 @@ class SBSpectrum1D(Spectrum1D):
         """
         t = Time(self._header['JD-OBS'], format='jd', scale='utc')
         loc = EarthLocation(
-            self._header['GEO_LONG'], self._header['GEO_LAT'], self._header['GEO_ELEV'] * u.m)
+            float(self._header['GEO_LONG']), float(self._header['GEO_LAT']), float(self._header['GEO_ELEV']) * u.m)
         vcorr = self._skycoord.radial_velocity_correction(
             kind=self._conf["RV_CORR_TYPE"], obstime=t, location=loc)
         self._rv_corr = vcorr.to(u.km / u.s)
@@ -406,7 +408,7 @@ class SpectroscopicBinarySystem:
         f = utilities.true_anomaly_from_eccentric(e, E)
         return (K * (e * np.cos(w) + np.cos(w + f)) + v0)
 
-    def __solveSystem(self):
+    def solveSystem(self):
         """
         Compute the orbital solution with BinaryStarSolver
         """
@@ -456,10 +458,10 @@ class SpectroscopicBinarySystem:
                 print(f"{s.getBaseName()} phase : {phase}")
 
         # export all results
-        res = [['JD-OBS', 'DATE-OBS', 'OBSERVER',
+        res = [['FILE', 'JD-OBS', 'DATE-OBS', 'EXPTIME', 'OBSERVER',
                 'INSTRUMENT', 'PHASE', 'CENTER', 'RV', 'ERROR']]
         for s in self._sb_spectra:
-            res.append([s.getJD(), s.getDate(), s.getObserver(), s.getInstrument(
+            res.append([s.getBaseName(), s.getJD(), s.getDate(), s.getHeader()['EXPTIME'], s.getObserver(), s.getInstrument(
             ), s.getPhase(), s.getCenterOfLine(), s.getRV(), s.getError()])
 
         with open(self._results_csv_filename, 'w') as f:
@@ -481,7 +483,7 @@ class SpectroscopicBinarySystem:
             sep='\n')
 
     def getOrbitalSolution(self):
-        self.__solveSystem()
+        self.solveSystem()
         return self._orbital_solution
 
     def __findNearest(self, array, value):
@@ -560,7 +562,7 @@ class SpectroscopicBinarySystem:
 
     def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
         if not self._orbital_solution:
-            self.__solveSystem()
+            self.solveSystem()
 
         plt.rcParams['font.size'] = font_size
         plt.rcParams['font.family'] = font_family
@@ -624,7 +626,7 @@ class SpectroscopicBinarySystem:
         """
 
         if not self._orbital_solution:
-            self.__solveSystem()
+            self.solveSystem()
 
         fig = go.Figure()
 
@@ -778,7 +780,7 @@ class SpectroscopicBinarySystem:
         plt.rcParams['font.family'] = font_family
 
         if not self._orbital_solution:
-            self.__solveSystem()
+            self.solveSystem()
 
         # sort sb spectra by phase
         self._sb_spectra.sort(key=lambda x: x.getPhase())
