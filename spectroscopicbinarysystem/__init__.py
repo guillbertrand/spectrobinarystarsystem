@@ -60,9 +60,8 @@ class SBSpectrum1D(Spectrum1D):
         spectrum_file = fits.open(filename)
 
         self._header = spectrum_file[0].header
-        if not 'JD-OBS' in self._header and 'MJD-OBS' in self._header:
-            self._header['JD-OBS'] = float(self._header['MJD-OBS']) + 2400000
-        self._jd = self._header['JD-OBS']
+        self._time = Time(self._header['DATE-OBS'], format='isot', scale='utc')
+        self._jd = self._time.jd
         self._observer = self._header['OBSERVER']
         with warnings.catch_warnings():  # Ignore warnings
             warnings.simplefilter('ignore')
@@ -122,11 +121,10 @@ class SBSpectrum1D(Spectrum1D):
 
     def getJD(self):
         """
-        Return 'JD-OBS' header field
         :return: float corresponding to the julian date of the observation
         :rtype: float
         """
-        return float(self._header['JD-OBS'])
+        return float(self._jd)
 
     def getHeader(self):
         return self._header
@@ -167,7 +165,7 @@ class SBSpectrum1D(Spectrum1D):
         Compute radial velocity correction in function of the target and the location of the observer
         :return: None
         """
-        t = Time(self._header['JD-OBS'], format='jd', scale='utc')
+        t = Time(self._jd, format='jd', scale='utc')
         loc = EarthLocation(
             float(self._header['GEO_LONG']), float(self._header['GEO_LAT']), float(self._header['GEO_ELEV']) * u.m)
         vcorr = self._skycoord.radial_velocity_correction(
