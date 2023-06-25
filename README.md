@@ -44,7 +44,6 @@ The geographical coordinates of the observer will allow to automatically correct
 18 | CTYPE1 = 'Wavelength'                        / Axis type
 20 | CRPIX1 = 1                                   / Reference pixel
 21 | BSS_VHEL= 0                                  / [km/s] Heliocentric speed
-26 | JD-OBS = 0                                   / JD start observation
 29 | GEO_LONG= 0                                  / Obs. geographic longitude
 30 | GEO_LAT = 0                                  / Obs. geographic latitude
 31 | GEO_ELEV= 0                                  / Obs. geographic elevation
