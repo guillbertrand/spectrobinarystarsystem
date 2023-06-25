@@ -510,9 +510,8 @@ class SpectroscopicBinarySystem:
         markers_style = ["o", "v", "^", "s", "D", "P", "X"]
 
         # define colors (max 60 distinct observers)
-        colors = cmap((np.arange(20)).astype(int), alpha=1)
-        + cmap((np.arange(20)).astype(int), alpha=.75)
-        + cmap((np.arange(20)).astype(int), alpha=.5)
+        colors = np.concatenate((cmap((np.arange(20)).astype(int), alpha=1), cmap(
+            (np.arange(20)).astype(int), alpha=.75), cmap((np.arange(20)).astype(int), alpha=.5)))
 
         # sort sb spectra by observer name
         self._sb_spectra.sort(key=lambda x: x.getObserver())
@@ -648,9 +647,8 @@ class SpectroscopicBinarySystem:
         cmap = plt.get_cmap('tab20')
 
         # define colors (max 60 distinct observers)
-        colors = cmap((np.arange(20)).astype(int), alpha=1)
-        + cmap((np.arange(20)).astype(int), alpha=.75)
-        + cmap((np.arange(20)).astype(int), alpha=.5)
+        colors = np.concatenate((cmap((np.arange(20)).astype(int), alpha=1), cmap(
+            (np.arange(20)).astype(int), alpha=.75), cmap((np.arange(20)).astype(int), alpha=.5)))
 
         markers_style = ['circle', 'square',
                          'diamond', 'triangle-up', 'triangle-down']
