@@ -13,13 +13,14 @@ sbs = SpectroscopicBinarySystem(
         "SB_TYPE": 1
     },
     verbose=True,
-    debug=False)
+    debug=True)
 
 # # plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
     subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
-    savefig=True)
+    savefig=True,
+    residual_y_multiple=2)
 
 
 # # plot 2d dynamic spectrum
