@@ -13,7 +13,7 @@ from astropy.io import fits
 from astropy.time import Time
 import astropy.units as u
 import astropy.wcs as fitswcs
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 from astropy.coordinates import SkyCoord, EarthLocation, SpectralCoord
 from astropy.modeling import models, fitting
 from astropy import constants as const
@@ -829,3 +829,13 @@ class SpectroscopicBinarySystem:
         plt.show()
 
         return spec2d
+
+
+def printPhaseEphem(jd0, period, start_date=None, step_in_days=1, count_in_days=20):
+    st = Time(start_date, format='isot', scale='utc')
+    for i in range(0, count_in_days, step_in_days):
+        dt = TimeDelta(i * 3600 * 24, format='sec')
+        ft = st + dt
+        jd = ft.jd
+        phase = (jd - jd0) / period % 1
+        print(f'date (UT) = {ft} phase = {phase:.2f}')

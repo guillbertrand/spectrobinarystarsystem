@@ -1,4 +1,4 @@
-from spectroscopicbinarysystem import SpectroscopicBinarySystem
+from spectroscopicbinarysystem import SpectroscopicBinarySystem, printPhaseEphem
 
 sbs = SpectroscopicBinarySystem(
     object_name='hd123299',
@@ -12,21 +12,25 @@ sbs = SpectroscopicBinarySystem(
         "RV_CORR_TYPE": "barycentric",
         "SB_TYPE": 1
     },
-    verbose=True,
-    debug=True)
+    verbose=False,
+    debug=False)
 
-# # plot result with matplotlib and save the results
+# print basic phase ephemeris for the next 20 days
+printPhaseEphem(jd0=2451441.804, period=51.4719,
+                start_date='2023-06-24T23:00:00')
+
+# plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to june 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True,
     residual_y_multiple=2)
 
 
-# # plot 2d dynamic spectrum
+# plot 2d dynamic spectrum
 sbs.plotSpec2DFlux(
     title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to may 2023\nhttps://alphadra.staros-projects.org/\n",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to june 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True
 )
 
