@@ -831,7 +831,7 @@ class SpectroscopicBinarySystem:
         return spec2d
 
 
-def printPhaseEphem(jd0, period, start_date=None, step_in_days=1, count_in_days=20):
+def printPhaseEphem(jd0, period, start_date="2023-06-26T23:00:00", step_in_days=1, count_in_days=20):
     st = Time(start_date, format='isot', scale='utc')
     for i in range(0, count_in_days, step_in_days):
         dt = TimeDelta(i * 3600 * 24, format='sec')
