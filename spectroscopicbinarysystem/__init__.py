@@ -282,6 +282,7 @@ class SpectroscopicBinarySystem:
 
         self._sb_spectra = []
         self._spectra_filename = []
+        self._observers = {}
         self._orbital_solution = None
         self._spectra_path = spectra_path
         self._object_name = object_name
@@ -322,6 +323,8 @@ class SpectroscopicBinarySystem:
                     spectrum_filename = os.path.join(self._spectra_path, file)
                     sbSpec1D = SBSpectrum1D(
                         spectrum_filename, self._skycoord, self._conf)
+                    self._observers[sbSpec1D.getObserver()
+                                    ] = sbSpec1D.getObserver()
                     self._sb_spectra.append(sbSpec1D)
                     if self._verbose:
                         print(sbSpec1D)
@@ -367,6 +370,14 @@ class SpectroscopicBinarySystem:
         :rtype: array
         """
         return self._sb_spectra
+
+    def getObservers(self):
+        """
+        Return all observers
+        :return: array of string
+        :rtype: array
+        """
+        return self._observers.keys()
 
     def getObservationCount(self):
         """
@@ -494,7 +505,7 @@ class SpectroscopicBinarySystem:
         array = np.asarray(array)
         return (np.abs(array - value)).argmin()
 
-    def __plotRadialVelocityDots(self, axs, t0, group_by_instruments=False):
+    def __plotRadialVelocityDots(self, axs, t0, group_by_instruments=False, observer=None):
         """
         Plot the radial velocity dots from the data
         :param axs: axes to plot
@@ -506,17 +517,28 @@ class SpectroscopicBinarySystem:
         marker_index = {}
         color_number = 0
 
+        self._residuals = []
+
         cmap = plt.get_cmap('tab20')
         markers_style = ["o", "v", "^", "s", "D", "P", "X"]
 
         # define colors (max 60 distinct observers)
         colors = np.concatenate((cmap((np.arange(20)).astype(int), alpha=1), cmap(
-            (np.arange(20)).astype(int), alpha=.75), cmap((np.arange(20)).astype(int), alpha=.5)))
+            (np.arange(20)).astype(int), alpha=.5), cmap((np.arange(20)).astype(int), alpha=.25)))
 
         # sort sb spectra by observer name
         self._sb_spectra.sort(key=lambda x: x.getObserver())
 
+        errors = []
+
+        obs_count = 0
+
         for s in self._sb_spectra:
+
+            if observer and observer != s.getObserver():
+                continue
+
+            obs_count += 1
 
             # get the observer
             obs = s.getObserver()
@@ -550,14 +572,87 @@ class SpectroscopicBinarySystem:
             self._residuals.append(delta)
             fmt = instruments[label] if group_by_instruments else 'o'
             error = s.getError()
+            errors.append(error)
             capsize = 3 if error else 0
             axs[1].errorbar(s.getPhase(), delta,
                             yerr=s.getError(), fmt=fmt, ecolor='k', capsize=capsize, color=color, lw=.7, markersize=5)
 
         print(
-            f'- Residual standard deviation : {np.std(self._residuals)}')
+            f'- Obs count : {obs_count}')
+        print(
+            f'- RMS O-C : {np.sqrt(np.mean(np.array(self._residuals)**2))}')
+        print(
+            f'- Mean O-C : {np.mean(self._residuals)}')
+        print(
+            f'- Mean std calibration error : {np.mean(errors)}')
+        if observer:
+            print(f'{observer}    {np.mean(self._residuals)}  {np.sqrt(np.mean(np.array(self._residuals)**2))}    {np.mean(errors)}')
 
-    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
+    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False, observer=None,  figsize=(12, 7)):
+        if not self._orbital_solution:
+            self.solveSystem()
+
+        plt.rcParams['font.size'] = font_size
+        plt.rcParams['font.family'] = font_family
+        fig, axs = plt.subplots(2, 1, figsize=figsize, gridspec_kw={
+            'height_ratios': [4, 1]}, sharex=True)
+        axs[1].set_xlabel('Phase', fontdict=None,
+                          labelpad=None, fontname='monospace', size=8)
+        axs[0].set_ylabel(
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='monospace', size=8)
+        axs[1].set_ylabel('RV residual', fontdict=None,
+                          labelpad=None, fontname='monospace', size=8)
+        axs[0].grid(color='grey', alpha=0.2, linestyle='-',
+                    linewidth=0.5, axis='both', which='both')
+        axs[1].grid(color='grey', alpha=0.2, linestyle='-',
+                    linewidth=0.5, axis='both', which='both')
+
+        # plot orbital solution
+        self._model_x = np.arange(0, 1.011, 0.001)
+        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(
+            x, self._v0, self._orbital_solution[0][1], self._orbital_solution[0][3], self._orbital_solution[0][2], self._orbital_solution[0][0]), self._model_x))
+        axs[0].plot(self._model_x, self._model_y, 'k',
+                    alpha=0.7, lw=0.7, label='Orbital solution')
+
+        # plot dots
+        self.__plotRadialVelocityDots(
+            axs, self._t0, group_by_instruments, observer)
+
+        split_oname = title.split(' ')
+        t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
+        p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
+        subtitle = f'{subtitle}\nT0={self._t0} P={p}' if subtitle else f'T0={self._t0} P={p}' if not observer else ''
+        axs[0].set_title("%s\n%s" % (t, subtitle), fontsize=9,
+                         fontweight="0", color='black')
+
+        if rv_y_multiple:
+            axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
+        axs[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
+
+        if residual_y_multiple:
+            axs[1].yaxis.set_major_locator(
+                MultipleLocator(residual_y_multiple))
+        axs[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
+
+        if (observer):
+            axs[0].legend(loc="upper left",
+                          prop={'size': 8})
+        else:
+            axs[0].legend(bbox_to_anchor=(1, 1), loc="upper left",
+                          frameon=False, prop={'size': 8})
+        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+        plt.xticks(np.arange(0, 1.01, 0.1))
+        if savefig:
+            if observer:
+                oc = "".join(x for x in observer if x.isalnum())
+                plt.savefig(
+                    f'{self._spectra_path}/{self._object_name}_{oc}_phased_result.png', dpi=dpi)
+            else:
+                plt.savefig(
+                    f'{self._spectra_path}/{self._object_name}_phased_result.png', dpi=dpi)
+        plt.show()
+
+    def plotRadialVelocityCurveByObserver(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
         if not self._orbital_solution:
             self.solveSystem()
 

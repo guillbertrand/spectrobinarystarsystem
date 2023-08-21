@@ -15,24 +15,33 @@ sbs = SpectroscopicBinarySystem(
     verbose=False,
     debug=False)
 
-# print basic phase ephemeris for the next 20 days
-printPhaseEphem(jd0=2451441.804, period=51.4719,
-                start_date='2023-06-24T23:00:00')
 
-# plot result with matplotlib and save the results
+# print basic phase ephemeris for the next 20 days
+# printPhaseEphem(jd0=2451441.804, period=51.4719,
+#                 start_date='2023-06-24T23:00:00')
+
+# # plot result with matplotlib and save the results
 sbs.plotRadialVelocityCurve(
     title="α Dra - HD123299 - Phased radial velocities",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to june 2023\nhttps://alphadra.staros-projects.org/\n",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to august 2023\nhttps://alphadra.staros-projects.org/\n",
     savefig=True,
-    residual_y_multiple=2)
+    residual_y_multiple=2
+)
 
+# for o in sbs.getObservers():
+#     sbs.plotRadialVelocityCurve(
+#         title=f"α Dra - HD123299 - {o}",
+#         subtitle="",
+#         savefig=True,
+#         observer=o,
+#         figsize=(6, 5))
 
 # plot 2d dynamic spectrum
-sbs.plotSpec2DFlux(
-    title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
-    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to june 2023\nhttps://alphadra.staros-projects.org/\n",
-    savefig=True
-)
+# sbs.plotSpec2DFlux(
+#     title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
+#     subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to july 2023\nhttps://alphadra.staros-projects.org/\n",
+#     savefig=True
+# )
 
 # # display result with plotly
 # sbs.plotlyRadialVelocityCurve(
