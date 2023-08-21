@@ -652,60 +652,6 @@ class SpectroscopicBinarySystem:
                     f'{self._spectra_path}/{self._object_name}_phased_result.png', dpi=dpi)
         plt.show()
 
-    def plotRadialVelocityCurveByObserver(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False):
-        if not self._orbital_solution:
-            self.solveSystem()
-
-        plt.rcParams['font.size'] = font_size
-        plt.rcParams['font.family'] = font_family
-        fig, axs = plt.subplots(2, 1, figsize=(12, 7), gridspec_kw={
-            'height_ratios': [4, 1]}, sharex=True)
-        axs[1].set_xlabel('Phase', fontdict=None,
-                          labelpad=None, fontname='monospace', size=8)
-        axs[0].set_ylabel(
-            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='monospace', size=8)
-        axs[1].set_ylabel('RV residual', fontdict=None,
-                          labelpad=None, fontname='monospace', size=8)
-        axs[0].grid(color='grey', alpha=0.2, linestyle='-',
-                    linewidth=0.5, axis='both', which='both')
-        axs[1].grid(color='grey', alpha=0.2, linestyle='-',
-                    linewidth=0.5, axis='both', which='both')
-
-        # plot orbital solution
-        self._model_x = np.arange(0, 1.011, 0.001)
-        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(
-            x, self._v0, self._orbital_solution[0][1], self._orbital_solution[0][3], self._orbital_solution[0][2], self._orbital_solution[0][0]), self._model_x))
-        axs[0].plot(self._model_x, self._model_y, 'k',
-                    alpha=0.7, lw=0.7, label='Orbital solution')
-
-        # plot dots
-        self.__plotRadialVelocityDots(axs, self._t0, group_by_instruments)
-
-        split_oname = title.split(' ')
-        t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
-        p = f'{self._orbital_solution[0][5]} ± {round(self._orbital_solution[1][5],4)} days'
-        subtitle = f'{subtitle}\nT0={self._t0} P={p}' if subtitle else f'T0={self._t0} P={p}'
-        axs[0].set_title("%s\n%s" % (t, subtitle), fontsize=9,
-                         fontweight="0", color='black')
-
-        if rv_y_multiple:
-            axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
-        axs[0].axhline(0, color='black', linewidth=0.7, linestyle="--")
-
-        if residual_y_multiple:
-            axs[1].yaxis.set_major_locator(
-                MultipleLocator(residual_y_multiple))
-        axs[1].axhline(0, color='black', linewidth=0.7, linestyle="--")
-
-        axs[0].legend(bbox_to_anchor=(1, 1), loc="upper left",
-                      frameon=False, prop={'size': 8})
-        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
-        plt.xticks(np.arange(0, 1.01, 0.1))
-        if savefig:
-            plt.savefig(
-                f'{self._spectra_path}/{self._object_name}_phased_result.png', dpi=dpi)
-        plt.show()
-
     def plotlyRadialVelocityCurve(self, title="", font_family='monospace', font_size=9, show=True, group_by_instrument=True):
         """
         Plot the radial velocity curve using plotly
