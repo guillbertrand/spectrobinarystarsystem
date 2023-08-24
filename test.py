@@ -13,7 +13,7 @@ sbs = SpectroscopicBinarySystem(
         "SB_TYPE": 1
     },
     verbose=False,
-    debug=False)
+    debug=True)
 
 
 # print basic phase ephemeris for the next 20 days
@@ -37,11 +37,11 @@ sbs.plotRadialVelocityCurve(
 #         figsize=(6, 5))
 
 # plot 2d dynamic spectrum
-# sbs.plotSpec2DFlux(
-#     title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
-#     subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to july 2023\nhttps://alphadra.staros-projects.org/\n",
-#     savefig=True
-# )
+sbs.plotSpec2DFlux(
+    title="α Dra - HD123299 - Hα line 2d dynamic spectrum",
+    subtitle=f"{sbs.getObservationCount()} observations collected from april 2022 to july 2023\nhttps://alphadra.staros-projects.org/\n",
+    savefig=True
+)
 
 # # display result with plotly
 # sbs.plotlyRadialVelocityCurve(
