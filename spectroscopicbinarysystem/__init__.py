@@ -332,35 +332,39 @@ class SpectroscopicBinarySystem:
         if self._verbose:
             print(f'{len(self._sb_spectra)} processed spectra')
         if self._debug:
-            plt.rcParams['font.size'] = '6'
-            plt.rcParams['font.family'] = 'monospace'
+            
+            #paginate_sb_spectra = [self._sb_spectra[i:i+9]
+            #                       for i in range(0, len(self._sb_spectra), 9)]
+            #for page, spectra in enumerate(paginate_sb_spectra):
+            
+            for i, s in enumerate(self._sb_spectra):     
+                plt.rcParams['font.family'] = 'Georgia'
+                fig, ax = plt.subplots(1, 1, figsize=(5, 4))    
+                extracted_profil, line_fitting, gauss_smooth = s.getDebugLineFitting()
+                
+                ax.grid(True)
+                ax.tick_params(
+                    axis='both', which='major')
+                ax.tick_params(
+                    axis='both', which='minor')
+                ax.plot(extracted_profil.spectral_axis.to(
+                    u.AA), extracted_profil.flux, color="k",  lw=1.7)
+                
+                # Add X axis label
+                ax.set_xlabel(" Wavelength in Å", fontdict=None, labelpad=None, font="Georgia")
 
-            paginate_sb_spectra = [self._sb_spectra[i:i+16]
-                                   for i in range(0, len(self._sb_spectra), 16)]
-            for page, spectra in enumerate(paginate_sb_spectra):
-                fig, axs = plt.subplots(4, 4, figsize=(
-                    10, 7), sharex=True, sharey=True)
-                for i, s in enumerate(spectra):
-                    ax = axs.flat[i]
-                    extracted_profil, line_fitting, gauss_smooth = s.getDebugLineFitting()
-                    ax.set_title(
-                        f'{s.getBaseName()}\n{s.getObserver()} JD={s.getJD()}', fontsize="6")
-                    ax.grid(True)
-                    ax.tick_params(
-                        axis='both', which='major', labelsize=6)
-                    ax.tick_params(
-                        axis='both', which='minor', labelsize=6)
-                    ax.plot(extracted_profil.spectral_axis.to(
-                        u.AA), extracted_profil.flux, color="k")
-                    ax.plot(gauss_smooth.spectral_axis.to(
-                        u.AA), gauss_smooth.flux-1*u.Jy, "b--")
-                    ax.plot(extracted_profil.spectral_axis.to(
-                        u.AA), line_fitting, color="r")
-                    ax.axvline(x=s.getCenterOfLine(),
-                               color='r', linestyle='-', lw=0.7)
+                # Add Y axis label
+                ax.set_ylabel("Relative intensity", fontdict=None, labelpad=None, font="Georgia")
+
+                # ax.plot(gauss_smooth.spectral_axis.to(
+                # u.AA), gauss_smooth.flux-1*u.Jy, "b--")
+                ax.plot(extracted_profil.spectral_axis.to(
+                    u.AA), line_fitting, color="r",  lw=1.7)
+                # ax.axvline(x=s.getCenterOfLine(),
+                #             color='r', linestyle='-', lw=1)
                 plt.tight_layout(pad=0.8, w_pad=2, h_pad=1)
                 plt.savefig(
-                    f'{self._spectra_path}/{self._object_name}_debug_result_page_{page}.png', dpi=300)
+                    f'{self._spectra_path}/fit_gaussian.png', dpi=150)
                 plt.close(fig)
 
     def getSpectra(self):
@@ -505,7 +509,7 @@ class SpectroscopicBinarySystem:
         array = np.asarray(array)
         return (np.abs(array - value)).argmin()
 
-    def __plotRadialVelocityDots(self, axs, t0, group_by_instruments=False, observer=None):
+    def __plotRadialVelocityDots(self, axs, t0, group_by_instruments=False, observer=None, color='k', markersize=5, capsize=3):
         """
         Plot the radial velocity dots from the data
         :param axs: axes to plot
@@ -540,45 +544,26 @@ class SpectroscopicBinarySystem:
 
             obs_count += 1
 
-            # get the observer
-            obs = s.getObserver()
-            if (obs not in observers.keys()):
-                observers[obs] = colors[color_number]
-                color_number += 1
-                if not group_by_instruments:
-                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                    fmt='o', ecolor='k', label=obs, capsize=0, color=observers[obs], lw=.7, markersize=5)
-            elif not group_by_instruments:
-                axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                fmt='o', ecolor='k', capsize=0, color=observers[obs], lw=.7, markersize=5)
-            color = observers[obs]
-
-            # get the instrument
-            if (group_by_instruments):
-                label = f"{obs} - {s.getInstrument()[:30]}…"
-                if label not in instruments.keys():
-                    if obs not in marker_index:
-                        marker_index[obs] = 0
-                    instruments[label] = markers_style[marker_index[obs]]
-                    marker_index[obs] += 1
-                    axs[0].errorbar(s.getPhase(), s.getRV(
-                    ), yerr=0, label=label, ecolor='k', capsize=0, fmt=instruments[label], color=color, lw=0.7, markersize=5)
-                else:
-                    axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
-                                    fmt=instruments[label], ecolor='k', capsize=0, color=color, lw=.7, markersize=5)
+            axs[0].errorbar(s.getPhase(), s.getRV(), yerr=0,
+                            fmt='o', ecolor=color, capsize=0, color=color, lw=.7, markersize=markersize)
 
             xindex = self.__findNearest(self._model_x, s.getPhase())
             delta = s.getRV() - self._model_y[xindex]
             self._residuals.append(delta)
-            fmt = instruments[label] if group_by_instruments else 'o'
+
             error = s.getError()
             errors.append(error)
-            capsize = 3 if error else 0
-            axs[1].errorbar(s.getPhase(), delta,
-                            yerr=s.getError(), fmt=fmt, ecolor='k', capsize=capsize, color=color, lw=.7, markersize=5)
+            if not error:
+                capsize = 0
+            markers, caps, bars = axs[1].errorbar(s.getPhase(), delta,
+                                                  yerr=s.getError(), fmt='o', ecolor=color, capsize=capsize, color=color, lw=.7, markersize=markersize)
+            [bar.set_alpha(0.5) for bar in bars]
+            [cap.set_alpha(0.5) for cap in caps]
 
         print(
             f'- Obs count : {obs_count}')
+        print(
+            f'- stddev: {np.std(self._residuals)}')
         print(
             f'- RMS O-C : {np.sqrt(np.mean(np.array(self._residuals)**2))}')
         print(
@@ -588,7 +573,7 @@ class SpectroscopicBinarySystem:
         if observer:
             print(f'{observer}    {np.mean(self._residuals)}  {np.sqrt(np.mean(np.array(self._residuals)**2))}    {np.mean(errors)}')
 
-    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='monospace', font_size=9, group_by_instruments=False, observer=None,  figsize=(12, 7)):
+    def plotRadialVelocityCurve(self, title="", subtitle="", rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='Georgia', font_size=9, group_by_instruments=False, observer=None,  figsize=(12, 7)):
         if not self._orbital_solution:
             self.solveSystem()
 
@@ -597,11 +582,11 @@ class SpectroscopicBinarySystem:
         fig, axs = plt.subplots(2, 1, figsize=figsize, gridspec_kw={
             'height_ratios': [4, 1]}, sharex=True)
         axs[1].set_xlabel('Phase', fontdict=None,
-                          labelpad=None, fontname='monospace', size=8)
+                          labelpad=None, fontname='Georgia', size=8)
         axs[0].set_ylabel(
-            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='monospace', size=8)
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='Georgia', size=8)
         axs[1].set_ylabel('RV residual', fontdict=None,
-                          labelpad=None, fontname='monospace', size=8)
+                          labelpad=None, fontname='Georgia', size=8)
         axs[0].grid(color='grey', alpha=0.2, linestyle='-',
                     linewidth=0.5, axis='both', which='both')
         axs[1].grid(color='grey', alpha=0.2, linestyle='-',
@@ -646,13 +631,70 @@ class SpectroscopicBinarySystem:
             if observer:
                 oc = "".join(x for x in observer if x.isalnum())
                 plt.savefig(
-                    f'{self._spectra_path}/{self._object_name}_{oc}_phased_result.png', dpi=dpi)
+                    f'{self._spectra_path}/{self._object_name}_{oc}_phased_result.eps', dpi=dpi)
             else:
                 plt.savefig(
                     f'{self._spectra_path}/{self._object_name}_phased_result.png', dpi=dpi)
         plt.show()
 
-    def plotlyRadialVelocityCurve(self, title="", font_family='monospace', font_size=9, show=True, group_by_instrument=True):
+    def plotSTAROSRadialVelocityCurve(self, rv_y_multiple=10, residual_y_multiple=None, savefig=False, dpi=150, font_family='Georgia', color="white", linecolor='#7BB2DE', font_size=12, group_by_instruments=False, observer=None,  figsize=(12, 7)):
+        if not self._orbital_solution:
+            self.solveSystem()
+
+        plt.rcParams['font.size'] = font_size
+        plt.rcParams['font.family'] = font_family
+        fig, axs = plt.subplots(2, 1, figsize=figsize, gridspec_kw={
+            'height_ratios': [4, 1]}, sharex=True)
+        axs[1].set_xlabel('Phase', fontdict=None,
+                          labelpad=None, fontname='Georgia', size=12, color=color)
+        axs[0].set_ylabel(
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='Georgia', size=12, color=color)
+        axs[1].set_ylabel('O-C [km $s^{-1}$]', fontdict=None,
+                          labelpad=None, fontname='Georgia', size=12, color=color)
+        axs[0].grid(color='grey', alpha=0.2, linestyle='-',
+                    linewidth=0.5, axis='both', which='both')
+        axs[1].grid(color='grey', alpha=0.2, linestyle='-',
+                    linewidth=0.5, axis='both', which='both')
+
+        # plot orbital solution
+        self._model_x = np.arange(0, 1.011, 0.001)
+        self._model_y = list(map(lambda x: self.__computeRadialVelocityCurve(
+            x, self._v0, self._orbital_solution[0][1], self._orbital_solution[0][3], self._orbital_solution[0][2], self._orbital_solution[0][0]), self._model_x))
+        axs[0].plot(self._model_x, self._model_y, linecolor,
+                    alpha=1, lw=1, label='Orbital solution')
+
+        # plot dots
+        self.__plotRadialVelocityDots(
+            axs, self._t0, group_by_instruments, observer, color=color, markersize=4, capsize=0)
+
+        if rv_y_multiple:
+            axs[0].yaxis.set_major_locator(MultipleLocator(rv_y_multiple))
+        axs[0].axhline(0, color=color, linewidth=0.7, linestyle="--")
+
+        if residual_y_multiple:
+            axs[1].yaxis.set_major_locator(
+                MultipleLocator(residual_y_multiple))
+        axs[1].axhline(0, color=color, linewidth=0.7, linestyle="--")
+
+        axs[0].legend(frameon=False, framealpha=0,
+                      labelcolor=color, fancybox=False)
+
+        for i in range(0, 2, 1):
+            axs[i].spines['bottom'].set_color(color)
+            axs[i].spines['top'].set_color(color)
+            axs[i].spines['right'].set_color(color)
+            axs[i].spines['left'].set_color(color)
+            axs[i].tick_params(axis='x', colors=color)
+            axs[i].tick_params(axis='y', colors=color)
+
+        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+        plt.xticks(np.arange(0, 1.01, 0.1))
+        if savefig:
+            plt.savefig(
+                f'{self._spectra_path}/{self._object_name}_staros_phased_result.eps', dpi=400, transparent=True)
+        plt.show()
+
+    def plotlyRadialVelocityCurve(self, title="", font_family='Georgia', font_size=9, show=True, group_by_instrument=True):
         """
         Plot the radial velocity curve using plotly
         # Todo : update parameters and link to yaml config file
@@ -804,7 +846,7 @@ class SpectroscopicBinarySystem:
                     va="center",
                     fontsize=8)
 
-    def plotSpec2DFlux(self, title="", subtitle="", savefig=False, dpi=150, font_family='monospace', font_size=9):
+    def plotSpec2DFlux(self, title="", subtitle="", savefig=False, dpi=150, font_family='Georgia', font_size=9):
         """
         Plot the 2d dynamic spectra
         :param title:
@@ -851,9 +893,9 @@ class SpectroscopicBinarySystem:
                                             wv_to_kms.max().value, 0, 1], aspect='auto')
 
         ax.set_ylabel('Phase', fontdict=None,
-                      labelpad=None, fontname='monospace', size=9)
+                      labelpad=None, fontname='Georgia', size=9)
         ax.set_xlabel(
-            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='monospace', size=9)
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='Georgia', size=9)
 
         split_oname = title.split(' ')
         t = ''.join(r"$\bf{%s}$ " % (w) for w in split_oname)
@@ -867,6 +909,78 @@ class SpectroscopicBinarySystem:
         if savefig:
             plt.savefig(
                 f'{self._spectra_path}/{self._object_name}_2d_spectrum_result.png', dpi=dpi)
+        plt.show()
+
+        return spec2d
+
+    def plotSTAROSSpec2DFlux(self, title="", subtitle="", savefig=False, dpi=150, font_family='Georgia', font_size=9):
+        """
+        Plot the 2d dynamic spectra
+        :param title:
+        :param font_family:
+        :param font_size:
+        :param show:
+        :return: fig
+        """
+        plt.rcParams['font.size'] = font_size
+        plt.rcParams['font.family'] = font_family
+
+        if not self._orbital_solution:
+            self.solveSystem()
+
+        # sort sb spectra by phase
+        self._sb_spectra.sort(key=lambda x: x.getPhase())
+
+        # create y axis range (phase)
+        y_phase = np.arange(0, 1.01, 0.015)
+        # create x axis range (wavelength) and convert to km/s
+        resample_grid = np.arange(6550, 6576, 0.01)
+        sc = SpectralCoord(resample_grid, unit='AA')
+        wv_to_kms = sc.to(u.km / u.s, doppler_convention='optical',
+                          doppler_rest=6562.82 * u.AA)
+        spec2d = np.zeros((len(wv_to_kms), len(y_phase)))
+
+        # resample each spectrum
+        for s in self._sb_spectra:
+            ss = copy.copy(s)
+            # apply heliocentric/barycentric correction
+            ss.shift_spectrum_to(
+                radial_velocity=s.getRVCorrection())
+            fluxc_resample = LinearInterpolatedResampler()
+            output_spectrum1D = fluxc_resample(ss, sc)
+            phase = s.getPhase()
+            indice = int(round(phase, 2) * (len(y_phase))-1)
+
+            spec2d[:, indice] = output_spectrum1D.flux
+
+        # prepare imshow
+        from matplotlib.colors import LinearSegmentedColormap
+        colors = ["#0d0224", "#7E59C9", "#7BB2DE"]  # R -> G -> B
+        cmap_name = 'my_list'
+        cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=100)
+
+        plt.rcParams["figure.figsize"] = (7, 7)
+        fig, ax = plt.subplots()
+        ax.imshow(np.rot90(spec2d), extent=[wv_to_kms.min().value,
+                                            wv_to_kms.max().value, 0, 1], aspect='auto')
+
+        ax.spines['bottom'].set_color('k')
+        ax.spines['top'].set_color('k')
+        ax.spines['right'].set_color('k')
+        ax.spines['left'].set_color('k')
+        ax.tick_params(axis='x', colors='k')
+        ax.tick_params(axis='y', colors='k')
+
+        ax.set_ylabel('Phase', fontdict=None,
+                      labelpad=None, fontname='Georgia', size=12, color="k")
+        ax.set_xlabel(
+            'Radial velocity [km $s^{-1}$]', fontdict=None, labelpad=None, fontname='Georgia', size=12, color="k")
+
+        plt.tight_layout(pad=1, w_pad=0, h_pad=1)
+        plt.yticks(np.arange(0, 1.01, 0.1))
+        if savefig:
+            plt.savefig(
+                f'{self._spectra_path}/{self._object_name}_staros_2d_spectrum2_result.png', dpi=300, transparent=True)
         plt.show()
 
         return spec2d
